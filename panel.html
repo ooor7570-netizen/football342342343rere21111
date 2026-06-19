@@ -3,113 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <title>Пульт Управления</title>
-    <script src="https://ably.com"></script>
     <style>
-        body {
-            background-color: #0b0f19;
-            color: #ffffff;
-            font-family: 'Segoe UI', sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-        }
-        /* Внешний контейнер пульта */
-        .controls-panel {
-            background: linear-gradient(135deg, #1e293b, #0f172a);
-            border: 4px solid #3b82f6;
-            border-radius: 20px;
-            padding: 30px;
-            width: 850px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-        }
-        .control-group {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-        }
+        body { background-color: #0b0f19; color: #ffffff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .controls-panel { background: linear-gradient(135deg, #1e293b, #0f172a); border: 4px solid #3b82f6; border-radius: 20px; padding: 30px; width: 850px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
+        .control-group { display: flex; gap: 15px; justify-content: center; }
         .control-group.left { width: 38%; }
-        .control-group.center { 
-            width: 24%; 
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
-        }
+        .control-group.center { width: 24%; flex-direction: column; align-items: center; gap: 12px; }
         .control-group.right { width: 38%; }
-
-        /* Стили кнопок */
-        button {
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-weight: bold;
-            border-radius: 6px;
-            transition: transform 0.1s, background 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        button:active {
-            transform: scale(0.92);
-        }
-        
-        /* Кнопки счета (-1 и +1) */
-        .btn-score {
-            width: 60px;
-            height: 40px;
-            font-size: 1.3rem;
-        }
+        button { color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 6px; transition: transform 0.1s, background 0.2s; display: flex; align-items: center; justify-content: center; }
+        button:active { transform: scale(0.92); }
+        .btn-score { width: 60px; height: 40px; font-size: 1.3rem; }
         .btn-score.plus { background-color: #3b82f6; }
         .btn-score.plus:hover { background-color: #2563eb; }
         .btn-score.minus { background-color: #ef4444; }
         .btn-score.minus:hover { background-color: #dc2626; }
-
-        /* Кнопки управления временем (Старт, Сброс) */
-        .timer-btns {
-            display: flex;
-            gap: 8px;
-        }
-        .btn-time {
-            padding: 8px 16px;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-        }
+        .timer-btns { display: flex; gap: 8px; }
+        .btn-time { padding: 8px 16px; font-size: 0.85rem; text-transform: uppercase; }
         .btn-time.start { background-color: #10b981; }
         .btn-time.start:hover { background-color: #059669; }
         .btn-time.pause { background-color: #f59e0b; }
         .btn-time.pause:hover { background-color: #d97706; }
         .btn-time.reset { background-color: #ef4444; }
         .btn-time.reset:hover { background-color: #dc2626; }
-
-        /* Кнопки переключения таймов (- и +) */
-        .period-btns {
-            display: flex;
-            gap: 8px;
-        }
-        .btn-period {
-            width: 35px;
-            height: 30px;
-            font-size: 1.2rem;
-            background-color: #475569;
-        }
+        .period-btns { display: flex; gap: 8px; }
+        .btn-period { width: 35px; height: 30px; font-size: 1.2rem; background-color: #475569; }
         .btn-period:hover { background-color: #64748b; }
     </style>
 </head>
 <body>
-
     <div class="controls-panel">
-        <!-- Кнопки счета слева -->
         <div class="control-group left">
             <button class="btn-score minus" onclick="changeScore(1, -1)">-1</button>
             <button class="btn-score plus" onclick="changeScore(1, 1)">+1</button>
         </div>
-
-        <!-- Кнопки времени и тайма по центру -->
         <div class="control-group center">
             <div class="timer-btns">
                 <button id="startStopBtn" class="btn-time start" onclick="toggleTimer()">Старт</button>
@@ -120,83 +46,39 @@
                 <button class="btn-period" onclick="changePeriod(1)">+</button>
             </div>
         </div>
-
-        <!-- Кнопки счета справа -->
         <div class="control-group right">
             <button class="btn-score minus" onclick="changeScore(2, -1)">-1</button>
             <button class="btn-score plus" onclick="changeScore(2, 1)">+1</button>
         </div>
     </div>
-
     <script>
-        const ably = new Ably.Realtime('VuNLlg.1DsxNQ:tjlOfC4H1_20brjx0Iq8h00bGKAKosux2Bkhbc-SxA0');
-        const channel = ably.channels.get('football-match');
-
         let score1 = 0, score2 = 0, period = 1, time = 0;
         let timerInterval = null, isRunning = false;
-        let name1 = "КОМАНДА 1", name2 = "КОМАНДА 2";
-
-        // Синхронизация данных с экраном
         function sendUpdate() {
             let mins = Math.floor(time / 60).toString().padStart(2, '0');
             let secs = (time % 60).toString().padStart(2, '0');
             let timeStr = `${mins}:${secs}`;
-
-            channel.publish('update', {
-                s1: score1,
-                s2: score2,
-                p: period,
-                time: timeStr
-            });
+            localStorage.setItem('football_data', JSON.stringify({ s1: score1, s2: score2, p: period, time: timeStr }));
         }
-
-        // Если названия поменяли на самом табло, пульт запомнит их
-        channel.subscribe('names_from_tablo', (message) => {
-            name1 = message.data.t1;
-            name2 = message.data.t2;
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'football_names_from_tablo') {
+                localStorage.setItem('football_names', e.newValue);
+            }
         });
-
         function changeScore(team, val) {
             if(team === 1) score1 = Math.max(0, score1 + val);
             else score2 = Math.max(0, score2 + val);
             sendUpdate();
         }
-
-        function changePeriod(val) {
-            period = Math.max(1, period + val);
-            sendUpdate();
-        }
-
+        function changePeriod(val) { period = Math.max(1, period + val); sendUpdate(); }
         function toggleTimer() {
             let btn = document.getElementById('startStopBtn');
-            if(isRunning) {
-                clearInterval(timerInterval);
-                btn.innerText = 'Старт';
-                btn.className = 'btn-time start';
-            } else {
-                timerInterval = setInterval(() => {
-                    time++;
-                    sendUpdate();
-                }, 1000);
-                btn.innerText = 'Пауза';
-                btn.className = 'btn-time pause';
-            }
-            isRunning = !isRunning;
-            sendUpdate();
+            if(isRunning) { clearInterval(timerInterval); btn.innerText = 'Старт'; btn.className = 'btn-time start'; }
+            else { timerInterval = setInterval(() => { time++; sendUpdate(); }, 1000); btn.innerText = 'Пауза'; btn.className = 'btn-time pause'; }
+            isRunning = !isRunning; sendUpdate();
         }
-
-        function resetTimer() {
-            clearInterval(timerInterval);
-            isRunning = false;
-            time = 0;
-            let btn = document.getElementById('startStopBtn');
-            btn.innerText = 'Старт';
-            btn.className = 'btn-time start';
-            sendUpdate();
-        }
-
-        // Первичная отправка данных при загрузке пульта
-        setTimeout(sendUpdate, 1500);
+        function resetTimer() { clearInterval(timerInterval); isRunning = false; time = 0; let btn = document.getElementById('startStopBtn'); btn.innerText = 'Старт'; btn.className = 'btn-time start'; sendUpdate(); }
+        setTimeout(sendUpdate, 1000);
     </script>
 </body>
 </html>
