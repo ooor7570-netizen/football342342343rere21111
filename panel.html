@@ -7,9 +7,9 @@
         body { background-color: #0b0f19; color: #ffffff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
         .controls-panel { background: linear-gradient(135deg, #1e293b, #0f172a); border: 4px solid #3b82f6; border-radius: 20px; padding: 30px; width: 850px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
         .control-group { display: flex; gap: 15px; justify-content: center; }
-        .control-group.left { width: 35%; }
-        .control-group.center { width: 30%; flex-direction: column; align-items: center; gap: 12px; }
-        .control-group.right { width: 35%; }
+        .control-group.left { width: 32%; }
+        .control-group.center { width: 36%; flex-direction: column; align-items: center; gap: 12px; }
+        .control-group.right { width: 32%; }
         button { color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 6px; transition: transform 0.1s, background 0.2s; display: flex; align-items: center; justify-content: center; }
         button:active { transform: scale(0.92); }
         .btn-score { width: 60px; height: 40px; font-size: 1.3rem; }
@@ -17,15 +17,17 @@
         .btn-score.plus:hover { background-color: #2563eb; }
         .btn-score.minus { background-color: #ef4444; }
         .btn-score.minus:hover { background-color: #dc2626; }
-        .timer-btns { display: flex; gap: 8px; }
-        .btn-time { padding: 8px 16px; font-size: 0.85rem; text-transform: uppercase; }
+        .timer-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .btn-time { padding: 8px 14px; font-size: 0.85rem; text-transform: uppercase; }
         .btn-time.start { background-color: #10b981; }
         .btn-time.start:hover { background-color: #059669; }
         .btn-time.pause { background-color: #f59e0b; }
         .btn-time.pause:hover { background-color: #d97706; }
         .btn-time.reset { background-color: #ef4444; }
         .btn-time.reset:hover { background-color: #dc2626; }
-        .btn-ot { background-color: #7c3aed; display: none; padding: 6px 12px; font-size: 0.8rem; }
+        .btn-time.test { background-color: #475569; }
+        .btn-time.test:hover { background-color: #64748b; }
+        .btn-ot { background-color: #7c3aed; display: none; padding: 6px 12px; font-size: 0.8rem; width: 100%; max-width: 200px; text-align: center;}
         .btn-ot.active { background-color: #d946ef; border: 2px solid white; }
     </style>
 </head>
@@ -39,6 +41,7 @@
             <div class="timer-btns">
                 <button id="startStopBtn" class="btn-time start" onclick="toggleTimer()">Старт</button>
                 <button class="btn-time reset" onclick="resetTimer()">Сброс</button>
+                <button class="btn-time test" onclick="addTestTime()">+30 мин (Тест)</button>
             </div>
             <button id="otBtn" class="btn-ot" onclick="toggleOvertime()">+5 МИН ОВЕРТАЙМ</button>
         </div>
@@ -50,7 +53,7 @@
     <script>
         let score1 = 0, score2 = 0, period = 1, time = 0;
         let timerInterval = null, isRunning = false;
-        let matchStatus = 'normal'; // normal, end1, end2
+        let matchStatus = 'normal'; 
         let hasOvertime = false;
 
         function sendUpdate() {
@@ -58,14 +61,12 @@
             let secs = (time % 60).toString().padStart(2, '0');
             let timeStr = `${mins}:${secs}`;
             
-            // Условие показа плашки овертайма (строго после 90 минут, если нажат +5)
             let showOtLabel = (period === 2 && time >= 5400 && hasOvertime);
 
             localStorage.setItem('football_data', JSON.stringify({ 
                 s1: score1, s2: score2, p: period, time: timeStr, status: matchStatus, showOtLabel: showOtLabel 
             }));
             
-            // Управление видимостью кнопки +5 (только во 2 тайме)
             document.getElementById('otBtn').style.display = (period === 2) ? 'block' : 'none';
         }
 
@@ -87,6 +88,27 @@
             sendUpdate();
         }
 
+        // Функция быстрой перемотки времени для тестов
+        function addTestTime() {
+            time += 1800; // добавляем 30 минут (1800 секунд)
+            
+            // Проверка лимитов при перемотке, чтобы время не улетело в бесконечность
+            if (period === 1 && time >= 2700) {
+                time = 2700;
+                matchStatus = 'end1';
+                if (isRunning) toggleTimer(); // ставим на паузу при конце тайма
+            }
+            if (period === 2) {
+                let limit = hasOvertime ? 5700 : 5400;
+                if (time >= limit) {
+                    time = limit;
+                    matchStatus = 'end2';
+                    if (isRunning) toggleTimer();
+                }
+            }
+            sendUpdate();
+        }
+
         function toggleTimer() {
             let btn = document.getElementById('startStopBtn');
             if(isRunning) {
@@ -95,11 +117,10 @@
                 btn.innerText = 'Старт';
                 btn.className = 'btn-time start';
             } else {
-                // Если была анимация конца 1 тайма, при повторном старте включаем 2 тайм
                 if (matchStatus === 'end1') {
                     matchStatus = 'normal';
                     period = 2;
-                    time = 2700; // старт с 45:00
+                    time = 2700; 
                 }
                 
                 isRunning = true;
@@ -109,7 +130,6 @@
                 timerInterval = setInterval(() => {
                     time++;
                     
-                    // Логика 1 тайма (остановка ровно на 45:00)
                     if (period === 1 && time >= 2700) {
                         time = 2700;
                         matchStatus = 'end1';
@@ -119,9 +139,8 @@
                         btn.className = 'btn-time start';
                     }
                     
-                    // Логика 2 тайма
                     if (period === 2) {
-                        let limit = hasOvertime ? 5700 : 5400; // 95 минут (90+5) или 90 минут
+                        let limit = hasOvertime ? 5700 : 5400;
                         if (time >= limit) {
                             time = limit;
                             matchStatus = 'end2';
