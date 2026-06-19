@@ -105,7 +105,6 @@
             visibility: hidden;
             text-transform: uppercase;
         }
-        /* Оверлеи для уведомлений */
         .overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -124,7 +123,6 @@
             text-shadow: 0 0 25px rgba(239, 68, 68, 0.6);
             z-index: 10;
         }
-        /* Особый праздничный стиль для надписи ГОЛ */
         .overlay.goal-style {
             color: #10b981;
             font-size: 9rem;
@@ -143,6 +141,9 @@
     </style>
 </head>
 <body>
+    <!-- Встроенный аудиоплеер для звука сирены -->
+    <audio id="goalSiren" src="https://google.com" preload="auto"></audio>
+
     <div class="scoreboard">
         <div id="endOverlay" class="overlay">Конец 1 тайма</div>
 
@@ -170,17 +171,15 @@
         let lastStatus = 'normal';
         let lastGoalTrigger = 0;
         let overlayTimeout = null;
-        let isShowingGoal = false; // Блокиратор времени во время гола
+        let isShowingGoal = false;
 
         window.addEventListener('storage', (e) => {
             if (e.key === 'football_data') {
                 const data = JSON.parse(e.newValue);
                 
-                // Всегда обновляем счет под оверлеем
                 document.getElementById('score1').innerText = data.s1;
                 document.getElementById('score2').innerText = data.s2;
                 
-                // Если сейчас НЕ горит ГОЛ, обновляем время и таймы в реальном времени
                 if (!isShowingGoal) {
                     document.getElementById('timer').innerText = data.time;
                     document.getElementById('period').innerText = data.p + ' ТАЙМ';
@@ -189,7 +188,6 @@
                 
                 const overlay = document.getElementById('endOverlay');
                 
-                // Отслеживаем точный момент нажатия на +1 (по изменению метки гола)
                 if (data.goalTrigger && data.goalTrigger !== lastGoalTrigger) {
                     lastGoalTrigger = data.goalTrigger;
                     isShowingGoal = true;
@@ -197,14 +195,17 @@
                     overlay.innerText = "ГОЛ!";
                     overlay.className = "overlay goal-style show";
                     
+                    // Запуск звукового сигнала сирены
+                    const audio = document.getElementById('goalSiren');
+                    audio.currentTime = 0; // Перемотка в начало, если забивают подряд
+                    audio.play().catch(error => console.log("Браузер заблокировал звук до первого клика по экрану:", error));
+                    
                     if (overlayTimeout) clearTimeout(overlayTimeout);
                     
-                    // Удерживаем надпись ГОЛ ровно 3 секунды, игнорируя тики таймера
                     overlayTimeout = setTimeout(() => {
                         overlay.className = "overlay";
                         isShowingGoal = false;
                         
-                        // Сразу после скрытия гола подтягиваем упущенное за 3 секунды время
                         const freshData = JSON.parse(localStorage.getItem('football_data'));
                         if (freshData) {
                             document.getElementById('timer').innerText = freshData.time;
@@ -213,7 +214,6 @@
                         }
                     }, 3000);
                 } 
-                // Если гол не горит, обрабатываем обычные сообщения конца таймов
                 else if (!isShowingGoal && data.status !== lastStatus) {
                     if (data.status === 'end1' || data.status === 'end2') {
                         overlay.innerText = (data.status === 'end1') ? "Конец 1 тайма" : "Конец матча";
