@@ -2,165 +2,35 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Футбольное Табло (Экран)</title>
+    <title>Футбольное Табло</title>
     <style>
-        body {
-            background-color: #0b0f19;
-            color: #ffffff;
-            font-family: 'Segoe UI', sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-        }
-        .scoreboard {
-            background: linear-gradient(135deg, #1e293b, #0f172a);
-            border: 6px solid #3b82f6;
-            border-radius: 25px;
-            padding: 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 95%;
-            height: 90%;
-            box-sizing: border-box;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.7);
-            position: relative;
-        }
-        .team-section {
-            width: 38%;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-        }
-        .team-input {
-            background: transparent;
-            border: 2px dashed transparent;
-            color: #e2e8f0;
-            font-size: 4rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            text-align: center;
-            width: 100%;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            padding: 5px;
-        }
-        .score {
-            font-size: 14rem;
-            font-weight: 900;
-            color: #3b82f6;
-            font-family: monospace;
-            background: #020617;
-            border-radius: 20px;
-            padding: 10px 40px;
-            min-width: 220px;
-            text-align: center;
-            box-shadow: inset 0 0 30px rgba(0,0,0,0.9);
-        }
-        .match-info {
-            width: 24%;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-        }
-        .timer {
-            font-size: 7.5rem;
-            font-weight: bold;
-            color: #ef4444;
-            font-family: monospace;
-            background: #020617;
-            border-radius: 15px;
-            padding: 10px 25px;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
-            margin-bottom: 25px;
-        }
-        .period {
-            font-size: 2.2rem;
-            font-weight: bold;
-            color: #10b981;
-            background: #064e3b;
-            padding: 10px 30px;
-            border-radius: 30px;
-            white-space: nowrap;
-            margin-bottom: 15px;
-        }
-        .ot-label {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: #f59e0b;
-            background: #78350f;
-            padding: 5px 20px;
-            border-radius: 15px;
-            visibility: hidden;
-            text-transform: uppercase;
-        }
-        .overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(2, 6, 23, 0.92);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 5rem;
-            font-weight: bold;
-            color: #ef4444;
-            border-radius: 20px;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.4s;
-            text-transform: uppercase;
-            text-shadow: 0 0 25px rgba(239, 68, 68, 0.6);
-            z-index: 10;
-        }
-        .overlay.goal-style {
-            color: #10b981;
-            font-size: 9rem;
-            letter-spacing: 5px;
-            text-shadow: 0 0 40px rgba(16, 185, 129, 0.8);
-            animation: pulse 1s infinite alternate;
-        }
-        .overlay.show {
-            opacity: 1;
-            visibility: visible;
-        }
-        @keyframes pulse {
-            from { transform: scale(0.95); }
-            to { transform: scale(1.05); }
-        }
+        body { background-color: #0b0f19; color: #ffffff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; height: 100vh; width: 100vw; overflow: hidden; }
+        .scoreboard { background: linear-gradient(135deg, #1e293b, #0f172a); border: 6px solid #3b82f6; border-radius: 25px; padding: 40px; display: flex; justify-content: space-between; align-items: center; width: 95%; height: 90%; box-sizing: border-box; box-shadow: 0 30px 60px rgba(0,0,0,0.7); position: relative; }
+        .team-section { width: 38%; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
+        .team-input { background: transparent; border: 2px dashed transparent; color: #e2e8f0; font-size: 4rem; font-weight: bold; text-transform: uppercase; text-align: center; width: 100%; margin-bottom: 20px; padding: 5px; }
+        .score { font-size: 14rem; font-weight: 900; color: #3b82f6; font-family: monospace; background: #020617; border-radius: 20px; padding: 10px 40px; min-width: 220px; text-align: center; box-shadow: inset 0 0 30px rgba(0,0,0,0.9); }
+        .match-info { width: 24%; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
+        .timer { font-size: 7.5rem; font-weight: bold; color: #ef4444; font-family: monospace; background: #020617; border-radius: 15px; padding: 10px 25px; box-shadow: inset 0 0 20px rgba(0,0,0,0.8); margin-bottom: 25px; }
+        .period { font-size: 2.2rem; font-weight: bold; color: #10b981; background: #064e3b; padding: 10px 30px; border-radius: 30px; white-space: nowrap; margin-bottom: 15px; }
+        .ot-label { font-size: 1.8rem; font-weight: bold; color: #f59e0b; background: #78350f; padding: 5px 20px; border-radius: 15px; visibility: hidden; text-transform: uppercase; }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.92); display: flex; align-items: center; justify-content: center; font-size: 5rem; font-weight: bold; color: #ef4444; border-radius: 20px; opacity: 0; visibility: hidden; transition: opacity 0.4s, visibility 0.4s; text-transform: uppercase; text-shadow: 0 0 25px rgba(239, 68, 68, 0.6); z-index: 10; }
+        .overlay.goal-style { color: #10b981; font-size: 9rem; letter-spacing: 5px; text-shadow: 0 0 40px rgba(16, 185, 129, 0.8); animation: pulse 1s infinite alternate; }
+        .overlay.show { opacity: 1; visibility: visible; }
+        @keyframes pulse { from { transform: scale(0.95); } to { transform: scale(1.05); } }
     </style>
 </head>
 <body>
-    <!-- Встроенный аудиоплеер для звука сирены -->
-    <audio id="goalSiren" src="https://google.com" preload="auto"></audio>
-
     <div class="scoreboard">
         <div id="endOverlay" class="overlay">Конец 1 тайма</div>
-
-        <!-- ЛЕВАЯ КОМАНДА -->
         <div class="team-section">
             <input type="text" id="t1Input" class="team-input" value="КОМАНДА 1" oninput="broadcastNames()">
             <div id="score1" class="score">0</div>
         </div>
-
-        <!-- ЦЕНТР -->
         <div class="match-info">
             <div id="timer" class="timer">00:00</div>
             <div id="period" class="period">1 ТАЙМ</div>
             <div id="otLabel" class="ot-label">Овертайм</div>
         </div>
-
-        <!-- ПРАВАЯ КОМАНДА -->
         <div class="team-section">
             <input type="text" id="t2Input" class="team-input" value="КОМАНДА 2" oninput="broadcastNames()">
             <div id="score2" class="score">0</div>
@@ -168,15 +38,31 @@
     </div>
 
     <script>
-        let lastStatus = 'normal';
-        let lastGoalTrigger = 0;
-        let overlayTimeout = null;
-        let isShowingGoal = false;
+        let lastStatus = 'normal', lastGoalTrigger = 0, overlayTimeout = null, isShowingGoal = false, audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playSirenSound() {
+            try {
+                initAudio(); if (!audioCtx) return;
+                const osc1 = audioCtx.createOscillator(), osc2 = audioCtx.createOscillator(), gainNode = audioCtx.createGain();
+                osc1.type = 'sawtooth'; osc1.frequency.setValueAtTime(140, audioCtx.currentTime);
+                osc2.type = 'square'; osc2.frequency.setValueAtTime(143, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 2.0);
+                osc1.connect(gainNode); osc2.connect(gainNode); gainNode.connect(audioCtx.destination);
+                osc1.start(); osc2.start(); osc1.stop(audioCtx.currentTime + 2.0); osc2.stop(audioCtx.currentTime + 2.0);
+            } catch(e) { console.log(e); }
+        }
+
+        window.addEventListener('click', initAudio);
 
         window.addEventListener('storage', (e) => {
             if (e.key === 'football_data') {
-                const data = JSON.parse(e.newValue);
-                
+                const data = JSON.parse(e.newValue); initAudio();
                 document.getElementById('score1').innerText = data.s1;
                 document.getElementById('score2').innerText = data.s2;
                 
@@ -189,28 +75,17 @@
                 const overlay = document.getElementById('endOverlay');
                 
                 if (data.goalTrigger && data.goalTrigger !== lastGoalTrigger) {
-                    lastGoalTrigger = data.goalTrigger;
-                    isShowingGoal = true;
-                    
-                    overlay.innerText = "ГОЛ!";
-                    overlay.className = "overlay goal-style show";
-                    
-                    // Запуск звукового сигнала сирены
-                    const audio = document.getElementById('goalSiren');
-                    audio.currentTime = 0; // Перемотка в начало, если забивают подряд
-                    audio.play().catch(error => console.log("Браузер заблокировал звук до первого клика по экрану:", error));
-                    
+                    lastGoalTrigger = data.goalTrigger; isShowingGoal = true;
+                    overlay.innerText = "ГОЛ!"; overlay.className = "overlay goal-style show";
+                    playSirenSound();
                     if (overlayTimeout) clearTimeout(overlayTimeout);
-                    
                     overlayTimeout = setTimeout(() => {
-                        overlay.className = "overlay";
-                        isShowingGoal = false;
-                        
-                        const freshData = JSON.parse(localStorage.getItem('football_data'));
-                        if (freshData) {
-                            document.getElementById('timer').innerText = freshData.time;
-                            document.getElementById('period').innerText = freshData.p + ' ТАЙМ';
-                            document.getElementById('otLabel').style.visibility = freshData.showOtLabel ? 'visible' : 'hidden';
+                        overlay.className = "overlay"; isShowingGoal = false;
+                        const fresh = JSON.parse(localStorage.getItem('football_data'));
+                        if (fresh) {
+                            document.getElementById('timer').innerText = fresh.time;
+                            document.getElementById('period').innerText = fresh.p + ' ТАЙМ';
+                            document.getElementById('otLabel').style.visibility = fresh.showOtLabel ? 'visible' : 'hidden';
                         }
                     }, 3000);
                 } 
@@ -218,14 +93,10 @@
                     if (data.status === 'end1' || data.status === 'end2') {
                         overlay.innerText = (data.status === 'end1') ? "Конец 1 тайма" : "Конец матча";
                         overlay.className = "overlay show";
-                        
                         if (overlayTimeout) clearTimeout(overlayTimeout);
-                        overlayTimeout = setTimeout(() => {
-                            overlay.className = "overlay";
-                        }, 5000);
+                        overlayTimeout = setTimeout(() => { overlay.className = "overlay"; }, 5000);
                     } else if (data.status === 'normal') {
-                        overlay.className = "overlay";
-                        if (overlayTimeout) clearTimeout(overlayTimeout);
+                        overlay.className = "overlay"; if (overlayTimeout) clearTimeout(overlayTimeout);
                     }
                     lastStatus = data.status;
                 }
@@ -239,8 +110,7 @@
 
         function broadcastNames() {
             localStorage.setItem('football_names_from_tablo', JSON.stringify({
-                t1: document.getElementById('t1Input').value,
-                t2: document.getElementById('t2Input').value
+                t1: document.getElementById('t1Input').value, t2: document.getElementById('t2Input').value
             }));
         }
     </script>
