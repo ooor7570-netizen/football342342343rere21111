@@ -105,7 +105,7 @@
             visibility: hidden;
             text-transform: uppercase;
         }
-        /* Улучшенная анимация всплывающей надписи */
+        /* Оверлеи для уведомлений */
         .overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -119,14 +119,26 @@
             border-radius: 20px;
             opacity: 0;
             visibility: hidden;
-            transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.6s;
+            transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.4s;
             text-transform: uppercase;
             text-shadow: 0 0 25px rgba(239, 68, 68, 0.6);
             z-index: 10;
         }
+        /* Особый праздничный стиль для надписи ГОЛ */
+        .overlay.goal-style {
+            color: #10b981;
+            font-size: 9rem;
+            letter-spacing: 5px;
+            text-shadow: 0 0 40px rgba(16, 185, 129, 0.8);
+            animation: pulse 1s infinite alternate;
+        }
         .overlay.show {
             opacity: 1;
             visibility: visible;
+        }
+        @keyframes pulse {
+            from { transform: scale(0.95); }
+            to { transform: scale(1.05); }
         }
     </style>
 </head>
@@ -170,23 +182,30 @@
                 
                 const overlay = document.getElementById('endOverlay');
                 
-                // Проверяем, изменился ли статус на завершение тайма/матча
-                if (data.status !== lastStatus) {
-                    if (data.status === 'end1' || data.status === 'end2') {
-                        // Устанавливаем текст в зависимости от ситуации
-                        overlay.innerText = (data.status === 'end1') ? "Конец 1 тайма" : "Конец матча";
-                        overlay.classList.add('show');
+                // Проверяем появление гола или смену статуса тайма
+                if (data.status !== lastStatus || data.goalTrigger !== (window.lastGoalTrigger || 0)) {
+                    window.lastGoalTrigger = data.goalTrigger;
+                    
+                    if (data.status === 'goal') {
+                        overlay.innerText = "ГОЛ!";
+                        overlay.className = "overlay goal-style show";
                         
-                        // Сбрасываем старый таймер скрытия, если он вдруг был активен
                         if (overlayTimeout) clearTimeout(overlayTimeout);
-                        
-                        // Автоматически скрываем надпись через 5 секунд (5000 миллисекунд)
                         overlayTimeout = setTimeout(() => {
-                            overlay.classList.remove('show');
-                        }, 5000);
-                    } else if (data.status === 'normal') {
-                        // Если на пульте нажали "Сброс", мгновенно убираем плашку
-                        overlay.classList.remove('show');
+                            overlay.className = "overlay";
+                        }, 3000); // Показываем надпись ГОЛ ровно 3 секунды
+                    } 
+                    else if (data.status === 'end1' || data.status === 'end2') {
+                        overlay.innerText = (data.status === 'end1') ? "Конец 1 тайма" : "Конец матча";
+                        overlay.className = "overlay show";
+                        
+                        if (overlayTimeout) clearTimeout(overlayTimeout);
+                        overlayTimeout = setTimeout(() => {
+                            overlay.className = "overlay";
+                        }, 5000); // Тайм/матч горит 5 секунд
+                    } 
+                    else if (data.status === 'normal') {
+                        overlay.className = "overlay";
                         if (overlayTimeout) clearTimeout(overlayTimeout);
                     }
                     lastStatus = data.status;
