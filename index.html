@@ -168,43 +168,62 @@
 
     <script>
         let lastStatus = 'normal';
+        let lastGoalTrigger = 0;
         let overlayTimeout = null;
+        let isShowingGoal = false; // Блокиратор времени во время гола
 
         window.addEventListener('storage', (e) => {
             if (e.key === 'football_data') {
                 const data = JSON.parse(e.newValue);
+                
+                // Всегда обновляем счет под оверлеем
                 document.getElementById('score1').innerText = data.s1;
                 document.getElementById('score2').innerText = data.s2;
-                document.getElementById('timer').innerText = data.time;
-                document.getElementById('period').innerText = data.p + ' ТАЙМ';
                 
-                document.getElementById('otLabel').style.visibility = data.showOtLabel ? 'visible' : 'hidden';
+                // Если сейчас НЕ горит ГОЛ, обновляем время и таймы в реальном времени
+                if (!isShowingGoal) {
+                    document.getElementById('timer').innerText = data.time;
+                    document.getElementById('period').innerText = data.p + ' ТАЙМ';
+                    document.getElementById('otLabel').style.visibility = data.showOtLabel ? 'visible' : 'hidden';
+                }
                 
                 const overlay = document.getElementById('endOverlay');
                 
-                // Проверяем появление гола или смену статуса тайма
-                if (data.status !== lastStatus || data.goalTrigger !== (window.lastGoalTrigger || 0)) {
-                    window.lastGoalTrigger = data.goalTrigger;
+                // Отслеживаем точный момент нажатия на +1 (по изменению метки гола)
+                if (data.goalTrigger && data.goalTrigger !== lastGoalTrigger) {
+                    lastGoalTrigger = data.goalTrigger;
+                    isShowingGoal = true;
                     
-                    if (data.status === 'goal') {
-                        overlay.innerText = "ГОЛ!";
-                        overlay.className = "overlay goal-style show";
+                    overlay.innerText = "ГОЛ!";
+                    overlay.className = "overlay goal-style show";
+                    
+                    if (overlayTimeout) clearTimeout(overlayTimeout);
+                    
+                    // Удерживаем надпись ГОЛ ровно 3 секунды, игнорируя тики таймера
+                    overlayTimeout = setTimeout(() => {
+                        overlay.className = "overlay";
+                        isShowingGoal = false;
                         
-                        if (overlayTimeout) clearTimeout(overlayTimeout);
-                        overlayTimeout = setTimeout(() => {
-                            overlay.className = "overlay";
-                        }, 3000); // Показываем надпись ГОЛ ровно 3 секунды
-                    } 
-                    else if (data.status === 'end1' || data.status === 'end2') {
+                        // Сразу после скрытия гола подтягиваем упущенное за 3 секунды время
+                        const freshData = JSON.parse(localStorage.getItem('football_data'));
+                        if (freshData) {
+                            document.getElementById('timer').innerText = freshData.time;
+                            document.getElementById('period').innerText = freshData.p + ' ТАЙМ';
+                            document.getElementById('otLabel').style.visibility = freshData.showOtLabel ? 'visible' : 'hidden';
+                        }
+                    }, 3000);
+                } 
+                // Если гол не горит, обрабатываем обычные сообщения конца таймов
+                else if (!isShowingGoal && data.status !== lastStatus) {
+                    if (data.status === 'end1' || data.status === 'end2') {
                         overlay.innerText = (data.status === 'end1') ? "Конец 1 тайма" : "Конец матча";
                         overlay.className = "overlay show";
                         
                         if (overlayTimeout) clearTimeout(overlayTimeout);
                         overlayTimeout = setTimeout(() => {
                             overlay.className = "overlay";
-                        }, 5000); // Тайм/матч горит 5 секунд
-                    } 
-                    else if (data.status === 'normal') {
+                        }, 5000);
+                    } else if (data.status === 'normal') {
                         overlay.className = "overlay";
                         if (overlayTimeout) clearTimeout(overlayTimeout);
                     }
