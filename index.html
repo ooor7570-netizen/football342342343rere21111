@@ -2,247 +2,128 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Футбольное Табло (Экран)</title>
+    <title>Футбольное Табло</title>
     <style>
-        body {
-            background-color: #0b0f19;
-            color: #ffffff;
-            font-family: 'Segoe UI', sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-        }
-        .scoreboard {
-            background: linear-gradient(135deg, #1e293b, #0f172a);
-            border: 6px solid #3b82f6;
-            border-radius: 25px;
-            padding: 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 95%;
-            height: 90%;
-            box-sizing: border-box;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.7);
-            position: relative;
-        }
-        .team-section {
-            width: 38%;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-        }
-        .team-input {
-            background: transparent;
-            border: 2px dashed transparent;
-            color: #e2e8f0;
-            font-size: 4rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            text-align: center;
-            width: 100%;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            padding: 5px;
-        }
-        .score {
-            font-size: 14rem;
-            font-weight: 900;
-            color: #3b82f6;
-            font-family: monospace;
-            background: #020617;
-            border-radius: 20px;
-            padding: 10px 40px;
-            min-width: 220px;
-            text-align: center;
-            box-shadow: inset 0 0 30px rgba(0,0,0,0.9);
-        }
-        .match-info {
-            width: 24%;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-        }
-        .timer {
-            font-size: 7.5rem;
-            font-weight: bold;
-            color: #ef4444;
-            font-family: monospace;
-            background: #020617;
-            border-radius: 15px;
-            padding: 10px 25px;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
-            margin-bottom: 25px;
-        }
-        .period {
-            font-size: 2.2rem;
-            font-weight: bold;
-            color: #10b981;
-            background: #064e3b;
-            padding: 10px 30px;
-            border-radius: 30px;
-            white-space: nowrap;
-            margin-bottom: 15px;
-        }
-        .ot-label {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: #f59e0b;
-            background: #78350f;
-            padding: 5px 20px;
-            border-radius: 15px;
-            visibility: hidden;
-            text-transform: uppercase;
-        }
-        /* Оверлеи для уведомлений */
-        .overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(2, 6, 23, 0.92);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 5rem;
-            font-weight: bold;
-            color: #ef4444;
-            border-radius: 20px;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.4s;
-            text-transform: uppercase;
-            text-shadow: 0 0 25px rgba(239, 68, 68, 0.6);
-            z-index: 10;
-        }
-        /* Особый праздничный стиль для надписи ГОЛ */
-        .overlay.goal-style {
-            color: #10b981;
-            font-size: 9rem;
-            letter-spacing: 5px;
-            text-shadow: 0 0 40px rgba(16, 185, 129, 0.8);
-            animation: pulse 1s infinite alternate;
-        }
-        .overlay.show {
-            opacity: 1;
-            visibility: visible;
-        }
-        @keyframes pulse {
-            from { transform: scale(0.95); }
-            to { transform: scale(1.05); }
-        }
+        :root { --bg1: #1e293b; --bg2: #0f172a; --border: #3b82f6; --t1: #e2e8f0; --t2: #e2e8f0; --s1: #3b82f6; --s2: #3b82f6; --time: #ef4444; --period: #10b981; }
+        body { background-color: #0b0f19; color: #ffffff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; height: 100vh; width: 100vw; overflow: hidden; }
+        .scoreboard { background: linear-gradient(135deg, var(--bg1), var(--bg2)); border: 6px solid var(--border); border-radius: 25px; padding: 40px; display: flex; justify-content: space-between; align-items: center; width: 95%; height: 90%; box-sizing: border-box; box-shadow: 0 30px 60px rgba(0,0,0,0.7); position: relative; }
+        .team-section { width: 38%; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
+        .logo-box { width: 120px; height: 120px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); border-radius: 15px; overflow: hidden; border: 2px dashed #475569; }
+        .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .logo-box.hidden { display: none; }
+        .team-input { background: transparent; border: 2px dashed transparent; color: var(--t1); font-size: 3.5rem; font-weight: bold; text-transform: uppercase; text-align: center; width: 100%; margin-bottom: 20px; padding: 5px; }
+        #t2Input { color: var(--t2); }
+        .score { font-size: 13rem; font-weight: 900; color: var(--s1); font-family: monospace; background: #020617; border-radius: 20px; padding: 10px 40px; min-width: 200px; text-align: center; box-shadow: inset 0 0 30px rgba(0,0,0,0.9); }
+        #score2 { color: var(--s2); }
+        .match-info { width: 24%; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
+        .timer { font-size: 7rem; font-weight: bold; color: var(--time); font-family: monospace; background: #020617; border-radius: 15px; padding: 10px 25px; box-shadow: inset 0 0 20px rgba(0,0,0,0.8); margin-bottom: 25px; }
+        .period { font-size: 2rem; font-weight: bold; color: var(--period); background: #064e3b; padding: 10px 30px; border-radius: 30px; white-space: nowrap; margin-bottom: 15px; }
+        .ot-label { font-size: 1.8rem; font-weight: bold; color: #f59e0b; background: #78350f; padding: 5px 20px; border-radius: 15px; visibility: hidden; text-transform: uppercase; }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.92); display: flex; align-items: center; justify-content: center; font-size: 5rem; font-weight: bold; color: #ef4444; border-radius: 20px; opacity: 0; visibility: hidden; transition: opacity 0.4s, visibility 0.4s; text-transform: uppercase; text-shadow: 0 0 25px rgba(239, 68, 68, 0.6); z-index: 10; }
+        .overlay.goal-style { color: #10b981; font-size: 9rem; letter-spacing: 5px; text-shadow: 0 0 40px rgba(16, 185, 129, 0.8); animation: pulse 1s infinite alternate; }
+        .overlay.show { opacity: 1; visibility: visible; }
+        @keyframes pulse { from { transform: scale(0.95); } to { transform: scale(1.05); } }
+        .settings-toggle { position: absolute; top: 15px; right: 15px; background: transparent; border: none; font-size: 2rem; cursor: pointer; opacity: 0.3; transition: opacity 0.2s; z-index: 20; }
+        .settings-toggle:hover { opacity: 1; }
+        .settings-panel { position: absolute; top: 0; right: -400px; width: 360px; height: 100%; background: #1e293b; border-left: 4px solid #3b82f6; box-shadow: -10px 0 30px rgba(0,0,0,0.5); transition: right 0.3s ease; z-index: 15; padding: 20px; box-sizing: border-box; overflow-y: auto; color: white; }
+        .settings-panel.open { right: 0; }
+        .settings-panel h3 { margin-top: 0; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; font-size: 1.4rem; }
+        .setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 0.95rem; }
+        .setting-item input[type="color"] { border: none; width: 40px; height: 25px; border-radius: 4px; cursor: pointer; background: transparent; }
+        .setting-item input[type="text"], .setting-item select { width: 60%; padding: 4px; border-radius: 4px; border: 1px solid #475569; background: #0f172a; color: white; }
+        .close-settings { background: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 15px; }
     </style>
 </head>
 <body>
+    <button class="settings-toggle" onclick="toggleSettings()">⚙️</button>
+    <div id="settings" class="settings-panel">
+        <h3>Кастомизация табло</h3>
+        <div class="setting-item"><label>Звук гола:</label><select id="sToggle" onchange="saveColors()"><option value="on">Вкл</option><option value="off">Выкл</option></select></div>
+        <div class="setting-item"><label>Тип сирены:</label><select id="sType" onchange="saveColors()"><option value="classic">Гудок</option><option value="high">Сирена</option><option value="bass">Бас</option></select></div>
+        <hr style="border-color:#475569">
+        <div class="setting-item"><label>Лого Слева (URL):</label><input type="text" id="l1Url" oninput="saveColors()"></div>
+        <div class="setting-item"><label>Лого Справа (URL):</label><input type="text" id="l2Url" oninput="saveColors()"></div>
+        <hr style="border-color:#475569">
+        <div class="setting-item"><label>Фон 1:</label><input type="color" id="c_bg1" value="#1e293b" onchange="saveColors()"></div>
+        <div class="setting-item"><label>Фон 2:</label><input type="color" id="c_bg2" value="#0f172a" onchange="saveColors()"></div>
+        <div class="setting-item"><label>Рамка:</label><input type="color" id="c_border" value="#3b82f6" onchange="saveColors()"></div>
+        <div class="setting-item"><label>Текст Команды 1:</label><input type="color" id="c_t1" value="#e2e8f0" onchange="saveColors()"></div>
+        <div class="setting-item"><label>Текст Команды 2:</label><input type="color" id="c_t2" value="#e2e8f0" onchange="saveColors()"></div>
+        <div class="setting-item"><label>Счет Слева:</label><input type="color" id="c_s1" value="#3b82f6" onchange="saveColors()"></div>
+        <div class="setting-item"><label>Счет Справа:</label><input type="color" id="c_s2" value="#3b82f6" onchange="saveColors()"></div>
+        <div class="setting-item"><label>Таймер:</label><input type="color" id="c_time" value="#ef4444" onchange="saveColors()"></div>
+        <div class="setting-item"><label>Тайм:</label><input type="color" id="c_period" value="#10b981" onchange="saveColors()"></div>
+        <button class="close-settings" onclick="toggleSettings()">Закрыть</button>
+    </div>
     <div class="scoreboard">
         <div id="endOverlay" class="overlay">Конец 1 тайма</div>
-
-        <!-- ЛЕВАЯ КОМАНДА -->
         <div class="team-section">
-            <input type="text" id="t1Input" class="team-input" value="КОМАНДА 1" oninput="broadcastNames()">
+            <div id="l1B" class="logo-box hidden"><img id="l1" src=""></div>
+            <input type="text" id="t1Input" class="team-input" value="КОМАНДА 1" oninput="bcNames()">
             <div id="score1" class="score">0</div>
         </div>
-
-        <!-- ЦЕНТР -->
         <div class="match-info">
             <div id="timer" class="timer">00:00</div>
             <div id="period" class="period">1 ТАЙМ</div>
             <div id="otLabel" class="ot-label">Овертайм</div>
         </div>
-
-        <!-- ПРАВАЯ КОМАНДА -->
         <div class="team-section">
-            <input type="text" id="t2Input" class="team-input" value="КОМАНДА 2" oninput="broadcastNames()">
+            <div id="l2B" class="logo-box hidden"><img id="l2" src=""></div>
+            <input type="text" id="t2Input" class="team-input" value="КОМАНДА 2" oninput="bcNames()">
             <div id="score2" class="score">0</div>
         </div>
     </div>
-
     <script>
-        let lastStatus = 'normal';
-        let lastGoalTrigger = 0;
-        let overlayTimeout = null;
-        let isShowingGoal = false; // Блокиратор времени во время гола
-
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'football_data') {
-                const data = JSON.parse(e.newValue);
-                
-                // Всегда обновляем счет под оверлеем
-                document.getElementById('score1').innerText = data.s1;
-                document.getElementById('score2').innerText = data.s2;
-                
-                // Если сейчас НЕ горит ГОЛ, обновляем время и таймы в реальном времени
-                if (!isShowingGoal) {
-                    document.getElementById('timer').innerText = data.time;
-                    document.getElementById('period').innerText = data.p + ' ТАЙМ';
-                    document.getElementById('otLabel').style.visibility = data.showOtLabel ? 'visible' : 'hidden';
-                }
-                
-                const overlay = document.getElementById('endOverlay');
-                
-                // Отслеживаем точный момент нажатия на +1 (по изменению метки гола)
-                if (data.goalTrigger && data.goalTrigger !== lastGoalTrigger) {
-                    lastGoalTrigger = data.goalTrigger;
-                    isShowingGoal = true;
-                    
-                    overlay.innerText = "ГОЛ!";
-                    overlay.className = "overlay goal-style show";
-                    
-                    if (overlayTimeout) clearTimeout(overlayTimeout);
-                    
-                    // Удерживаем надпись ГОЛ ровно 3 секунды, игнорируя тики таймера
-                    overlayTimeout = setTimeout(() => {
-                        overlay.className = "overlay";
-                        isShowingGoal = false;
-                        
-                        // Сразу после скрытия гола подтягиваем упущенное за 3 секунды время
-                        const freshData = JSON.parse(localStorage.getItem('football_data'));
-                        if (freshData) {
-                            document.getElementById('timer').innerText = freshData.time;
-                            document.getElementById('period').innerText = freshData.p + ' ТАЙМ';
-                            document.getElementById('otLabel').style.visibility = freshData.showOtLabel ? 'visible' : 'hidden';
-                        }
-                    }, 3000);
-                } 
-                // Если гол не горит, обрабатываем обычные сообщения конца таймов
-                else if (!isShowingGoal && data.status !== lastStatus) {
-                    if (data.status === 'end1' || data.status === 'end2') {
-                        overlay.innerText = (data.status === 'end1') ? "Конец 1 тайма" : "Конец матча";
-                        overlay.className = "overlay show";
-                        
-                        if (overlayTimeout) clearTimeout(overlayTimeout);
-                        overlayTimeout = setTimeout(() => {
-                            overlay.className = "overlay";
-                        }, 5000);
-                    } else if (data.status === 'normal') {
-                        overlay.className = "overlay";
-                        if (overlayTimeout) clearTimeout(overlayTimeout);
-                    }
-                    lastStatus = data.status;
-                }
-            }
-            if (e.key === 'football_names') {
-                const names = JSON.parse(e.newValue);
-                document.getElementById('t1Input').value = names.t1;
-                document.getElementById('t2Input').value = names.t2;
-            }
-        });
-
-        function broadcastNames() {
-            localStorage.setItem('football_names_from_tablo', JSON.stringify({
-                t1: document.getElementById('t1Input').value,
-                t2: document.getElementById('t2Input').value
-            }));
+        let lastStatus='normal',lastGoalTrigger=0,overlayTimeout=null,isShowingGoal=false,audioCtx=null;
+        function toggleSettings(){document.getElementById('settings').classList.toggle('open');}
+        function saveColors(){
+            const config={bg1:document.getElementById('c_bg1').value,bg2:document.getElementById('c_bg2').value,border:document.getElementById('c_border').value,t1:document.getElementById('c_t1').value,t2:document.getElementById('c_t2').value,s1:document.getElementById('c_s1').value,s2:document.getElementById('c_s2').value,time:document.getElementById('c_time').value,period:document.getElementById('c_period').value,sound:document.getElementById('sToggle').value,soundType:document.getElementById('sType').value,l1:document.getElementById('l1Url').value,l2:document.getElementById('l2Url').value};
+            localStorage.setItem('football_theme',JSON.stringify(config));applyTheme();
         }
+        function applyTheme(){
+            const cfg=JSON.parse(localStorage.getItem('football_theme'));if(!cfg)return;
+            const r=document.documentElement;r.style.setProperty('--bg1',cfg.bg1);r.style.setProperty('--bg2',cfg.bg2);r.style.setProperty('--border',cfg.border);r.style.setProperty('--t1',cfg.t1);r.style.setProperty('--t2',cfg.t2);r.style.setProperty('--s1',cfg.s1);r.style.setProperty('--s2',cfg.s2);r.style.setProperty('--time',cfg.time);r.style.setProperty('--period',cfg.period);
+            document.getElementById('c_bg1').value=cfg.bg1;document.getElementById('c_bg2').value=cfg.bg2;document.getElementById('c_border').value=cfg.border;document.getElementById('c_t1').value=cfg.t1;document.getElementById('c_t2').value=cfg.t2;document.getElementById('c_s1').value=cfg.s1;document.getElementById('c_s2').value=cfg.s2;document.getElementById('c_time').value=cfg.time;document.getElementById('c_period').value=cfg.period;document.getElementById('sToggle').value=cfg.sound;document.getElementById('sType').value=cfg.soundType;document.getElementById('l1Url').value=cfg.l1;document.getElementById('l2Url').value=cfg.l2;
+            const b1=document.getElementById('l1B'),b2=document.getElementById('l2B');
+            if(cfg.l1){document.getElementById('l1').src=cfg.l1;b1.classList.remove('hidden');}else b1.classList.add('hidden');
+            if(cfg.l2){document.getElementById('l2').src=cfg.l2;b2.classList.remove('hidden');}else b2.classList.add('hidden');
+        }
+        function initAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();}
+        function playSirenSound(){
+            const cfg=JSON.parse(localStorage.getItem('football_theme'));if(cfg&&cfg.sound==='off')return;
+            try{
+                initAudio();if(!audioCtx)return;
+                const o1=audioCtx.createOscillator(),o2=audioCtx.createOscillator(),g=audioCtx.createGain();
+                let f1=140,f2=143,t1='sawtooth',t2='square',dur=2.0;
+                if(cfg&&cfg.soundType==='high'){f1=580;f2=585;t1='sine';t2='sawtooth';dur=1.5;}
+                if(cfg&&cfg.soundType==='bass'){f1=75;f2=77;t1='sawtooth';t2='sawtooth';dur=2.5;}
+                o1.type=t1;o1.frequency.setValueAtTime(f1,audioCtx.currentTime);o2.type=t2;o2.frequency.setValueAtTime(f2,audioCtx.currentTime);
+                g.gain.setValueAtTime(0.4,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+dur);
+                o1.connect(g);o2.connect(g);g.connect(audioCtx.destination);o1.start();o2.start();o1.stop(audioCtx.currentTime+dur);o2.stop(audioCtx.currentTime+dur);
+            }catch(e){console.log(e);}
+        }
+        window.addEventListener('click',initAudio);window.addEventListener('load',applyTheme);
+        window.addEventListener('storage',(e)=>{
+            if(e.key==='football_data'){
+                const data=JSON.parse(e.newValue);initAudio();document.getElementById('score1').innerText=data.s1;document.getElementById('score2').innerText=data.s2;
+                if(!isShowingGoal){document.getElementById('timer').innerText=data.time;document.getElementById('period').innerText=data.p+' ТАЙМ';document.getElementById('otLabel').style.visibility=data.showOtLabel?'visible':'hidden';}
+                const overlay=document.getElementById('endOverlay');
+                if(data.goalTrigger&&data.goalTrigger!==lastGoalTrigger){
+                    lastGoalTrigger=data.goalTrigger;isShowingGoal=true;overlay.innerText="ГОЛ!";overlay.className="overlay goal-style show";playSirenSound();
+                    if(overlayTimeout)clearTimeout(overlayTimeout);
+                    overlayTimeout=setTimeout(() => {
+                        overlay.className="overlay";isShowingGoal=false;const fresh=JSON.parse(localStorage.getItem('football_data'));
+                        if(fresh){document.getElementById('timer').innerText=fresh.time;document.getElementById('period').innerText=fresh.p+' ТАЙМ';document.getElementById('otLabel').style.visibility=fresh.showOtLabel?'visible':'hidden';}
+                    },3000);
+                }else if(!isShowingGoal&&data.status!==lastStatus){
+                    if(data.status==='end1'||data.status==='end2'){overlay.innerText=(data.status==='end1')?"Конец 1 тайма":"Конец матча";overlay.className="overlay show";if(overlayTimeout)clearTimeout(overlayTimeout);overlayTimeout=setTimeout(()=>{overlay.className="overlay";},5000);
+                    }else if(data.status==='normal'){overlay.className="overlay";if(overlayTimeout)clearTimeout(overlayTimeout);}lastStatus=data.status;
+                }
+            }
+            if(e.key==='football_names'){const names=JSON.parse(e.newValue);document.getElementById('t1Input').value=names.t1;document.getElementById('t2Input').value=names.t2;}
+            if(e.key==='football_theme'){applyTheme();}
+        });
+        function bcNames(){localStorage.setItem('football_names_from_tablo',JSON.stringify({t1:document.getElementById('t1Input').value,t2:document.getElementById('t2Input').value}));}
     </script>
 </body>
 </html>
