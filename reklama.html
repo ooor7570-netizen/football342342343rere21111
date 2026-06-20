@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Рекламный Щит (Синхронный)</title>
+    <title>Рекламный Щит (HD-Рендер)</title>
     <style>
         body, html {
             margin: 0;
@@ -100,7 +100,7 @@
             background: rgba(239, 68, 68, 1);
         }
 
-        /* Контейнер для дублирования GIF */
+        /* Контейнер для дублирования GIF с HD-рендерингом */
         .ad-banner {
             width: 100%;
             height: 100%;
@@ -108,6 +108,11 @@
             background-position: center;
             background-size: auto 100%;
             display: none;
+            
+            /* Магия для повышения четкости при сильном растяжении текстуры: */
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+            image-rendering: pixelated;
         }
 
         .ad-banner.active {
@@ -131,9 +136,7 @@
 
     <!-- Рекламное полотно -->
     <div id="banner" class="ad-banner"></div>
-
     <script>
-        // Функция включения отображения (без перезаписи памяти)
         function applyAd(url) {
             const banner = document.getElementById('banner');
             const setupBox = document.getElementById('setupBox');
@@ -147,36 +150,25 @@
             resetBtn.style.display = 'block';
         }
 
-        // Кнопка "Запустить" — меняет локальную память, запуская цепную реакцию
         function startAd() {
             const url = document.getElementById('gifUrl').value.trim();
             if (!url) return;
-
-            // Запускаем у себя
             applyAd(url);
-
-            // Записываем в общую память игры, чтобы остальные экраны это услышали
             localStorage.setItem('saved_football_ad', url);
         }
 
-        // Кнопка сброса рекламы (также синхронная)
         function resetAd() {
             document.getElementById('setupBox').classList.remove('hidden');
             document.getElementById('banner').classList.remove('active');
             document.getElementById('resetBtn').style.display = 'none';
-            
-            // Удаляем из памяти, давая команду остальным очиститься
             localStorage.removeItem('saved_football_ad');
         }
 
-        // СЛУШАТЕЛЬ СИНХРОНИЗАЦИИ: Самая главная часть
         window.addEventListener('storage', (e) => {
             if (e.key === 'saved_football_ad') {
                 if (e.newValue) {
-                    // Если на другом экране включили рекламу — включаем её у себя
                     applyAd(e.newValue);
                 } else {
-                    // Если на другом экране нажали "Сменить" — сбрасываем у себя
                     document.getElementById('setupBox').classList.remove('hidden');
                     document.getElementById('banner').classList.remove('active');
                     document.getElementById('resetBtn').style.display = 'none';
@@ -184,12 +176,10 @@
             }
         });
 
-        // Запуск по нажатию Enter
         document.getElementById('gifUrl').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') startAd();
         });
 
-        // Авто-подгрузка при старте Майнкрафта
         window.addEventListener('load', () => {
             const savedUrl = localStorage.getItem('saved_football_ad');
             if (savedUrl) applyAd(savedUrl);
