@@ -4,17 +4,17 @@
     <meta charset="UTF-8">
     <title>Пульт Управления</title>
     <style>
+        :root { --score1-color: #3b82f6; --score2-color: #3b82f6; }
         body { background-color: #0b0f19; color: #ffffff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
         .controls-panel { background: linear-gradient(135deg, #1e293b, #0f172a); border: 4px solid #3b82f6; border-radius: 20px; padding: 30px; width: 850px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
         .control-group { display: flex; gap: 15px; justify-content: center; }
-        .control-group.left { width: 32%; }
+        .control-group.left, .control-group.right { width: 32%; }
         .control-group.center { width: 36%; flex-direction: column; align-items: center; gap: 12px; }
-        .control-group.right { width: 32%; }
         button { color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 6px; transition: transform 0.1s, background 0.2s; display: flex; align-items: center; justify-content: center; }
         button:active { transform: scale(0.92); }
         .btn-score { width: 60px; height: 40px; font-size: 1.3rem; }
-        .btn-score.plus { background-color: #3b82f6; }
-        .btn-score.plus:hover { background-color: #2563eb; }
+        .btn-score.plus.p1 { background-color: var(--score1-color); }
+        .btn-score.plus.p2 { background-color: var(--score2-color); }
         .btn-score.minus { background-color: #ef4444; }
         .btn-score.minus:hover { background-color: #dc2626; }
         .timer-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
@@ -35,149 +35,68 @@
     <div class="controls-panel">
         <div class="control-group left">
             <button class="btn-score minus" onclick="changeScore(1, -1)">-1</button>
-            <button class="btn-score plus" onclick="changeScore(1, 1)">+1</button>
+            <button class="btn-score plus p1" onclick="changeScore(1, 1)">+1</button>
         </div>
         <div class="control-group center">
             <div class="timer-btns">
                 <button id="startStopBtn" class="btn-time start" onclick="toggleTimer()">Старт</button>
                 <button class="btn-time reset" onclick="resetTimer()">Сброс</button>
-                <button class="btn-time test" onclick="addTestTime()">+30 мин (Тест)</button>
+                <button class="btn-time test" onclick="addTestTime()">+30 мин</button>
             </div>
             <button id="otBtn" class="btn-ot" onclick="toggleOvertime()">+5 МИН ОВЕРТАЙМ</button>
         </div>
         <div class="control-group right">
             <button class="btn-score minus" onclick="changeScore(2, -1)">-1</button>
-            <button class="btn-score plus" onclick="changeScore(2, 1)">+1</button>
+            <button class="btn-score plus p2" onclick="changeScore(2, 1)">+1</button>
         </div>
     </div>
     <script>
-        let score1 = 0, score2 = 0, period = 1, time = 0;
-        let timerInterval = null, isRunning = false;
-        let matchStatus = 'normal'; 
-        let hasOvertime = false;
-        let goalTrigger = 0; // Счётчик для отслеживания момента забития гола
-
+        let score1 = 0, score2 = 0, period = 1, time = 0, timerInterval = null, isRunning = false, matchStatus = 'normal', hasOvertime = false, goalTrigger = 0;
+        
         function sendUpdate() {
-            let mins = Math.floor(time / 60).toString().padStart(2, '0');
-            let secs = (time % 60).toString().padStart(2, '0');
-            let timeStr = `${mins}:${secs}`;
-            
+            let mins = Math.floor(time / 60).toString().padStart(2, '0'), secs = (time % 60).toString().padStart(2, '0'), timeStr = `${mins}:${secs}`;
             let showOtLabel = (period === 2 && time >= 5400 && hasOvertime);
-
-            localStorage.setItem('football_data', JSON.stringify({ 
-                s1: score1, s2: score2, p: period, time: timeStr, status: matchStatus, showOtLabel: showOtLabel, goalTrigger: goalTrigger
-            }));
-            
+            localStorage.setItem('football_data', JSON.stringify({ s1: score1, s2: score2, p: period, time: timeStr, status: matchStatus, showOtLabel: showOtLabel, goalTrigger: goalTrigger }));
             document.getElementById('otBtn').style.display = (period === 2) ? 'block' : 'none';
         }
-
+        
+        function applyTheme() {
+            const config = JSON.parse(localStorage.getItem('football_theme'));
+            if (config) {
+                document.documentElement.style.setProperty('--score1-color', config.s1);
+                document.documentElement.style.setProperty('--score2-color', config.s2);
+            }
+        }
+        
         window.addEventListener('storage', (e) => {
-            if (e.key === 'football_names_from_tablo') {
-                localStorage.setItem('football_names', e.newValue);
-            }
+            if (e.key === 'football_names_from_tablo') { localStorage.setItem('football_names', e.newValue); }
+            if (e.key === 'football_theme') { applyTheme(); }
         });
-
+        
         function changeScore(team, val) {
-            if(team === 1) score1 = Math.max(0, score1 + val);
-            else score2 = Math.max(0, score2 + val);
-            
-            // Если прибавили гол (+1), временно включаем статус гола
-            if (val > 0) {
-                matchStatus = 'goal';
-                goalTrigger = Date.now(); // Создаем уникальную метку времени
-                sendUpdate();
-                
-                // Возвращаем обычный статус, чтобы не мешать таймерам
-                setTimeout(() => {
-                    if (matchStatus === 'goal') matchStatus = 'normal';
-                }, 100);
-            } else {
-                sendUpdate();
-            }
+            if(team === 1) score1 = Math.max(0, score1 + val); else score2 = Math.max(0, score2 + val);
+            if (val > 0) { matchStatus = 'goal'; goalTrigger = Date.now(); sendUpdate(); setTimeout(() => { if (matchStatus === 'goal') matchStatus = 'normal'; }, 100); } else { sendUpdate(); }
         }
-
-        function toggleOvertime() {
-            hasOvertime = !hasOvertime;
-            document.getElementById('otBtn').classList.toggle('active', hasOvertime);
-            sendUpdate();
-        }
-
-        function addTestTime() {
-            time += 1800; 
-            if (period === 1 && time >= 2700) {
-                time = 2700;
-                matchStatus = 'end1';
-                if (isRunning) toggleTimer(); 
-            }
-            if (period === 2) {
-                let limit = hasOvertime ? 5700 : 5400;
-                if (time >= limit) {
-                    time = limit;
-                    matchStatus = 'end2';
-                    if (isRunning) toggleTimer();
-                }
-            }
-            sendUpdate();
-        }
-
+        function toggleOvertime() { hasOvertime = !hasOvertime; document.getElementById('otBtn').classList.toggle('active', hasOvertime); sendUpdate(); }
+        function addTestTime() { time += 1800; if (period === 1 && time >= 2700) { time = 2700; matchStatus = 'end1'; if (isRunning) toggleTimer(); } if (period === 2) { let limit = hasOvertime ? 5700 : 5400; if (time >= limit) { time = limit; matchStatus = 'end2'; if (isRunning) toggleTimer(); } } sendUpdate(); }
+        
         function toggleTimer() {
             let btn = document.getElementById('startStopBtn');
-            if(isRunning) {
-                clearInterval(timerInterval);
-                isRunning = false;
-                btn.innerText = 'Старт';
-                btn.className = 'btn-time start';
-            } else {
-                if (matchStatus === 'end1' || matchStatus === 'goal') {
-                    matchStatus = 'normal';
-                    period = 2;
-                    time = 2700; 
-                }
+            if(isRunning) { clearInterval(timerInterval); isRunning = false; btn.innerText = 'Старт'; btn.className = 'btn-time start'; }
+            else {
+                if (matchStatus === 'end1' || matchStatus === 'goal') { matchStatus = 'normal'; period = 2; time = 2700; }
                 if (matchStatus === 'end2') matchStatus = 'normal';
-                
-                isRunning = true;
-                btn.innerText = 'Пауза';
-                btn.className = 'btn-time pause';
-                
+                isRunning = true; btn.innerText = 'Пауза'; btn.className = 'btn-time pause';
                 timerInterval = setInterval(() => {
                     time++;
-                    
-                    if (period === 1 && time >= 2700) {
-                        time = 2700;
-                        matchStatus = 'end1';
-                        clearInterval(timerInterval);
-                        isRunning = false;
-                        btn.innerText = 'Старт';
-                        btn.className = 'btn-time start';
-                    }
-                    
-                    if (period === 2) {
-                        let limit = hasOvertime ? 5700 : 5400;
-                        if (time >= limit) {
-                            time = limit;
-                            matchStatus = 'end2';
-                            clearInterval(timerInterval);
-                            isRunning = false;
-                            btn.innerText = 'Старт';
-                            btn.className = 'btn-time start';
-                        }
-                    }
+                    if (period === 1 && time >= 2700) { time = 2700; matchStatus = 'end1'; clearInterval(timerInterval); isRunning = false; btn.innerText = 'Старт'; btn.className = 'btn-time start'; }
+                    if (period === 2) { let limit = hasOvertime ? 5700 : 5400; if (time >= limit) { time = limit; matchStatus = 'end2'; clearInterval(timerInterval); isRunning = false; btn.innerText = 'Старт'; btn.className = 'btn-time start'; } }
                     if (matchStatus !== 'goal') sendUpdate();
                 }, 1000);
-            }
-            sendUpdate();
+            } sendUpdate();
         }
-
-        function resetTimer() {
-            clearInterval(timerInterval);
-            isRunning = false;
-            time = 0; period = 1; matchStatus = 'normal'; hasOvertime = false;
-            document.getElementById('otBtn').classList.remove('active');
-            let btn = document.getElementById('startStopBtn');
-            btn.innerText = 'Старт'; btn.className = 'btn-time start';
-            sendUpdate();
-        }
-        setTimeout(sendUpdate, 1000);
+        function resetTimer() { clearInterval(timerInterval); isRunning = false; time = 0; period = 1; matchStatus = 'normal'; hasOvertime = false; document.getElementById('otBtn').classList.remove('active'); let btn = document.getElementById('startStopBtn'); btn.innerText = 'Старт'; btn.className = 'btn-time start'; sendUpdate(); }
+        window.addEventListener('load', () => { sendUpdate(); applyTheme(); });
     </script>
 </body>
 </html>
