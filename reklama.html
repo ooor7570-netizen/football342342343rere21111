@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Рекламный Щит</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #0b0f19;
+            overflow: hidden;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        /* Окно ввода ссылки по центру */
+        .input-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1e293b;
+            padding: 30px;
+            border-radius: 15px;
+            border: 3px solid #3b82f6;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            text-align: center;
+            z-index: 10;
+            width: 450px;
+            box-sizing: border-box;
+            transition: opacity 0.4s, visibility 0.4s;
+        }
+
+        .input-container.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .input-container h3 {
+            margin-top: 0;
+            color: #ffffff;
+            margin-bottom: 15px;
+        }
+
+        .input-container input {
+            width: 100%;
+            padding: 10px;
+            background: #0f172a;
+            border: 1px solid #475569;
+            color: white;
+            border-radius: 6px;
+            text-align: center;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+        }
+
+        .input-container button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .input-container button:hover {
+            background: #2563eb;
+        }
+
+        /* Кнопка сброса рекламы (появляется в углу, когда запущена реклама) */
+        .reset-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(239, 68, 68, 0.3);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 5;
+            font-size: 0.8rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        body:hover .reset-btn {
+            opacity: 1;
+        }
+        .reset-btn:hover {
+            background: rgba(239, 68, 68, 1);
+        }
+
+        /* Контейнер для дублирования GIF */
+        .ad-banner {
+            width: 100%;
+            height: 100%;
+            /* Магия CSS: картинка бесконечно повторяется по горизонтали */
+            background-repeat: repeat-x;
+            background-position: center;
+            /* Растягиваем изображение строго по высоте экрана, ширина подстроится сама */
+            background-size: auto 100%;
+            display: none;
+        }
+
+        .ad-banner.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Окно настройки -->
+    <div id="setupBox" class="input-container">
+        <h3>Настройка баннера</h3>
+        <input type="text" id="gifUrl" placeholder="Вставьте URL ссылку на .gif или картинку">
+        <button onclick="startAd()">Запустить рекламу</button>
+    </div>
+
+    <!-- Кнопка смены рекламы -->
+    <button id="resetBtn" class="reset-btn" style="display:none;" onclick="resetAd()">⚙️ Сменить</button>
+
+    <!-- Рекламное полотно -->
+    <div id="banner" class="ad-banner"></div>
+
+    <script>
+        // Функция запуска рекламы
+        function startAd() {
+            const url = document.getElementById('gifUrl').value.trim();
+            if (!url) return;
+
+            const banner = document.getElementById('banner');
+            const setupBox = document.getElementById('setupBox');
+            const resetBtn = document.getElementById('resetBtn');
+
+            // Устанавливаем гифку фоном элемента
+            banner.style.backgroundImage = `url('${url}')`;
+            
+            // Скрываем меню, показываем баннер
+            setupBox.classList.add('hidden');
+            banner.classList.add('active');
+            resetBtn.style.display = 'block';
+
+            // Сохраняем ссылку в память, чтобы реклама не пропадала при перезапуске
+            localStorage.setItem('saved_football_ad', url);
+        }
+
+        // Функция возврата к настройкам
+        function resetAd() {
+            document.getElementById('setupBox').classList.remove('hidden');
+            document.getElementById('banner').classList.remove('active');
+            document.getElementById('resetBtn').style.display = 'none';
+            localStorage.removeItem('saved_football_ad');
+        }
+
+        // Авто-загрузка сохраненной рекламы при открытии страницы
+        window.addEventListener('load', () => {
+            const savedUrl = localStorage.getItem('saved_football_ad');
+            if (savedUrl) {
+                document.getElementById('gifUrl').value = savedUrl;
+                startAd();
+            }
+        });
+    </script>
+</body>
+</html>
