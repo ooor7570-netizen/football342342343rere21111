@@ -6,11 +6,15 @@
     <style>
         :root { --bg1: #1e293b; --bg2: #0f172a; --border: #3b82f6; --t1: #e2e8f0; --t2: #e2e8f0; --s1: #3b82f6; --s2: #3b82f6; --time: #ef4444; --period: #10b981; }
         body { background-color: #0b0f19; color: #ffffff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; height: 100vh; width: 100vw; overflow: hidden; }
-        .scoreboard { background: linear-gradient(135deg, var(--bg1), var(--bg2)); border: 6px solid var(--border); border-radius: 25px; padding: 40px; display: flex; justify-content: space-between; align-items: center; width: 95%; height: 90%; box-sizing: border-box; box-shadow: 0 30px 60px rgba(0,0,0,0.7); position: relative; }
-        .team-section { width: 38%; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
-        .logo-box { width: 120px; height: 120px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); border-radius: 15px; overflow: hidden; border: 2px dashed #475569; }
-        .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .logo-box.hidden { display: none; }
+        .scoreboard { background: linear-gradient(135deg, var(--bg1), var(--bg2)); border: 6px solid var(--border); border-radius: 25px; padding: 30px; display: flex; justify-content: space-between; align-items: center; width: 95%; height: 90%; box-sizing: border-box; box-shadow: 0 30px 60px rgba(0,0,0,0.7); position: relative; }
+        .team-section { width: 38%; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; box-sizing: border-box; }
+        
+        /* Измененный блок логотипа: теперь он гибко забирает ВСЁ свободное место по высоте до верха экрана */
+        .logo-box { width: 100%; flex-grow: 1; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px dashed transparent; min-height: 50px; }
+        /* Картинка растягивается до упора, но сохраняет свои футбольные пропорции */
+        .logo-box img { width: 100%; height: 100%; object-fit: contain; max-height: 100%; max-width: 100%; }
+        .logo-box.hidden { display: none !important; }
+        
         .team-input { background: transparent; border: 2px dashed transparent; color: var(--t1); font-size: 3.5rem; font-weight: bold; text-transform: uppercase; text-align: center; width: 100%; margin-bottom: 20px; padding: 5px; }
         #t2Input { color: var(--t2); }
         .score { font-size: 13rem; font-weight: 900; color: var(--s1); font-family: monospace; background: #020617; border-radius: 20px; padding: 10px 40px; min-width: 200px; text-align: center; box-shadow: inset 0 0 30px rgba(0,0,0,0.9); }
@@ -74,7 +78,7 @@
         </div>
     </div>
     <script>
-        let lastStatus='normal',lastGoalTrigger=0,overlayTimeout=null,isShowingGoal=false,audioCtx=null;
+        let lastStatus='normal',lastGoalTrigger='0',overlayTimeout=null,isShowingGoal=false,audioCtx=null;
         function toggleSettings(){document.getElementById('settings').classList.toggle('open');}
         function saveColors(){
             const config={bg1:document.getElementById('c_bg1').value,bg2:document.getElementById('c_bg2').value,border:document.getElementById('c_border').value,t1:document.getElementById('c_t1').value,t2:document.getElementById('c_t2').value,s1:document.getElementById('c_s1').value,s2:document.getElementById('c_s2').value,time:document.getElementById('c_time').value,period:document.getElementById('c_period').value,sound:document.getElementById('sToggle').value,soundType:document.getElementById('sType').value,l1:document.getElementById('l1Url').value,l2:document.getElementById('l2Url').value};
