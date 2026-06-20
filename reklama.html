@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Рекламный Щит</title>
+    <title>Рекламный Щит (Синхронный)</title>
     <style>
         body, html {
             margin: 0;
@@ -26,7 +26,7 @@
             border: 3px solid #3b82f6;
             box-shadow: 0 20px 40px rgba(0,0,0,0.5);
             z-index: 10;
-            width: 600px; /* Увеличили ширину, чтобы всё влезло в один ряд */
+            width: 600px;
             box-sizing: border-box;
             transition: opacity 0.4s, visibility 0.4s;
         }
@@ -43,7 +43,6 @@
             text-align: center;
         }
 
-        /* Контейнер для выстраивания инпута и кнопки сбоку друг от друга */
         .row-group {
             display: flex;
             gap: 12px;
@@ -51,7 +50,7 @@
         }
 
         .input-container input {
-            flex-grow: 1; /* Инпут забирает всё свободное место слева */
+            flex-grow: 1;
             padding: 12px;
             background: #0f172a;
             border: 1px solid #475569;
@@ -69,7 +68,7 @@
             font-weight: bold;
             border-radius: 6px;
             cursor: pointer;
-            white-space: nowrap; /* Чтобы текст кнопки не переносился */
+            white-space: nowrap;
             transition: background 0.2s;
             font-size: 0.95rem;
         }
@@ -78,7 +77,7 @@
             background: #2563eb;
         }
 
-        /* Кнопка сброса рекламы в углу */
+        /* Кнопка смены рекламы в углу */
         .reset-btn {
             position: absolute;
             top: 10px;
@@ -123,7 +122,7 @@
         <h3>Настройка рекламного баннера</h3>
         <div class="row-group">
             <input type="text" id="gifUrl" placeholder="Вставьте URL ссылку на .gif или картинку">
-            <button onclick="startAd()">Запустить рекламу</button>
+            <button onclick="startAd()">Запустить везде</button>
         </div>
     </div>
 
@@ -134,42 +133,66 @@
     <div id="banner" class="ad-banner"></div>
 
     <script>
-        function startAd() {
-            const url = document.getElementById('gifUrl').value.trim();
-            if (!url) return;
-
+        // Функция включения отображения (без перезаписи памяти)
+        function applyAd(url) {
             const banner = document.getElementById('banner');
             const setupBox = document.getElementById('setupBox');
             const resetBtn = document.getElementById('resetBtn');
 
             banner.style.backgroundImage = `url('${url}')`;
+            document.getElementById('gifUrl').value = url;
             
             setupBox.classList.add('hidden');
             banner.classList.add('active');
             resetBtn.style.display = 'block';
+        }
 
+        // Кнопка "Запустить" — меняет локальную память, запуская цепную реакцию
+        function startAd() {
+            const url = document.getElementById('gifUrl').value.trim();
+            if (!url) return;
+
+            // Запускаем у себя
+            applyAd(url);
+
+            // Записываем в общую память игры, чтобы остальные экраны это услышали
             localStorage.setItem('saved_football_ad', url);
         }
 
-        document.getElementById('gifUrl').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                startAd();
-            }
-        });
-
+        // Кнопка сброса рекламы (также синхронная)
         function resetAd() {
             document.getElementById('setupBox').classList.remove('hidden');
             document.getElementById('banner').classList.remove('active');
             document.getElementById('resetBtn').style.display = 'none';
+            
+            // Удаляем из памяти, давая команду остальным очиститься
             localStorage.removeItem('saved_football_ad');
         }
 
+        // СЛУШАТЕЛЬ СИНХРОНИЗАЦИИ: Самая главная часть
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'saved_football_ad') {
+                if (e.newValue) {
+                    // Если на другом экране включили рекламу — включаем её у себя
+                    applyAd(e.newValue);
+                } else {
+                    // Если на другом экране нажали "Сменить" — сбрасываем у себя
+                    document.getElementById('setupBox').classList.remove('hidden');
+                    document.getElementById('banner').classList.remove('active');
+                    document.getElementById('resetBtn').style.display = 'none';
+                }
+            }
+        });
+
+        // Запуск по нажатию Enter
+        document.getElementById('gifUrl').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') startAd();
+        });
+
+        // Авто-подгрузка при старте Майнкрафта
         window.addEventListener('load', () => {
             const savedUrl = localStorage.getItem('saved_football_ad');
-            if (savedUrl) {
-                document.getElementById('gifUrl').value = savedUrl;
-                startAd();
-            }
+            if (savedUrl) applyAd(savedUrl);
         });
     </script>
 </body>
