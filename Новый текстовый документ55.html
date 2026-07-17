@@ -1,0 +1,539 @@
+    <style>
+        :root {
+            --border-color: #007bff;
+            --font-size: 16px;
+            --font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-family);
+            background-color: #f4f7f6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden; /* Защита от горизонтальной прокрутки */
+        }
+
+        /* Адаптивный контейнер сайта */
+        .site-container {
+            width: 100%;
+            max-width: 800px;
+            background: #ffffff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        /* Адаптивное изображение сверху */
+        .top-image {
+            width: 100%;
+            height: auto;
+            min-height: 200px;
+            max-height: 380px;
+            object-fit: cover;
+            background-color: #e9ecef;
+            display: block;
+        }
+
+        /* Адаптивные отступы для контента */
+        .content-area {
+            padding: 5vw; /* Отступы зависят от ширины экрана */
+            flex-grow: 1;
+            box-sizing: border-box;
+        }
+
+        @media (min-width: 768px) {
+            .content-area {
+                padding: 30px; /* Фиксированные отступы на ПК */
+            }
+        }
+
+        .text-block {
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            font-size: var(--font-size);
+            line-height: 1.6;
+            transition: all 0.3s ease;
+            word-wrap: break-word; /* Перенос длинных слов */
+        }
+
+        /* Адаптивное модальное окно */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-window {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 92%;
+            max-width: 650px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 480px) {
+            .modal-window {
+                width: 100%;
+                height: 100%;
+                max-height: 100vh;
+                border-radius: 0; /* На смартфонах во весь экран */
+                padding: 15px;
+            }
+        }
+
+        .modal-window h2 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            font-size: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .form-group input[type="text"],
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 15px; /* Удобный размер для кликов на смартфонах */
+        }
+
+        .sync-input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .lines-management {
+            border: 1px solid #ddd;
+            padding: 12px;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+
+        /* Элемент строки */
+        .line-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .line-item-main {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+        }
+
+        .line-item textarea {
+            flex-grow: 1;
+            resize: vertical;
+            height: 60px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        /* Адаптивные палитры внутри строк */
+        .line-colors {
+            display: flex;
+            flex-wrap: wrap; /* Перенос палитр на новую строку, если мало места */
+            gap: 15px;
+            align-items: center;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .line-colors div {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .line-colors input[type="color"] {
+            width: 35px;
+            height: 28px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-primary { background: #007bff; color: white; }
+        .btn-primary:hover { background: #0056b3; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #bd2130; }
+        .btn-success { background: #28a745; color: white; padding: 8px 12px; font-size: 13px; }
+        .btn-success:hover { background: #218838; }
+
+        .modal-actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+        
+        @media (max-width: 480px) {
+            .modal-actions {
+                flex-direction: column; /* Кнопки "Применить" и "Отмена" встают друг под друга на мобилках */
+            }
+            .modal-actions .btn {
+                width: 100%;
+            }
+        }
+    </style>
+<body>
+
+    <!-- Основной сайт -->
+    <div class="site-container">
+        <img id="mainImage" class="top-image" src="https://unsplash.com" alt="Top Image">
+        <div class="content-area" id="contentArea">
+            <!-- Сюда данные загружаются автоматически из JavaScript -->
+        </div>
+    </div>
+
+    <!-- Модальное окно настроек -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-window">
+            <h2>Настройки страницы</h2>
+            
+            <!-- Поле управления кодом синхронизации -->
+            <div class="form-group">
+                <label for="roomCodeInput">Код синхронизации (введите чужой код для подключения):</label>
+                <div class="sync-input-group">
+                    <input type="text" id="roomCodeInput" style="text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">
+                    <button type="button" class="btn btn-primary" id="connectRoomBtn">Подключить</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="imgUrlInput">URL изображения сверху:</label>
+                <input type="text" id="imgUrlInput">
+            </div>
+
+            <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                    <label for="fontSizeInput">Размер текста (px):</label>
+                    <input type="text" id="fontSizeInput">
+                </div>
+                <div>
+                    <label for="fontFamilySelect">Шрифт сайта:</label>
+                    <select id="fontFamilySelect">
+                        <option value="'Segoe UI', sans-serif">Segoe UI (Стандартный)</option>
+                        <option value="'Times New Roman', serif">Times New Roman (С засечками)</option>
+                        <option value="'Courier New', monospace">Courier New (Код)</option>
+                        <option value="'Georgia', serif">Georgia (Элегантный)</option>
+                        <option value="'Arial', sans-serif">Arial (Простой)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="borderColorInput">Общий цвет рамки для блоков:</label>
+                <input type="color" id="borderColorInput" style="width: 50px; height: 35px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+
+            <div class="form-group">
+                <label style="margin-bottom: 10px;">Управление строками текста и цветами:</label>
+                <div class="lines-management">
+                    <div id="linesContainer"></div>
+                    <button type="button" class="btn btn-success" id="addLineBtn">+ Добавить строчку</button>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-danger" id="cancelBtn">Отмена</button>
+                <button class="btn btn-primary" id="saveBtn">Применить</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Основные элементы интерфейса
+        const mainImage = document.getElementById('mainImage');
+        const contentArea = document.getElementById('contentArea');
+        const modalOverlay = document.getElementById('modalOverlay');
+
+        // Элементы формы внутри модального окна
+        const roomCodeInput = document.getElementById('roomCodeInput');
+        const connectRoomBtn = document.getElementById('connectRoomBtn');
+        const imgUrlInput = document.getElementById('imgUrlInput');
+        const fontSizeInput = document.getElementById('fontSizeInput');
+        const fontFamilySelect = document.getElementById('fontFamilySelect');
+        const borderColorInput = document.getElementById('borderColorInput');
+        const linesContainer = document.getElementById('linesContainer');
+        const addLineBtn = document.getElementById('addLineBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+
+        let currentRoomCode = '';
+        let syncChannel = null;
+
+        // Генерация случайного буквенно-цифрового ID для вкладки
+        function generateRoomCode() {
+            return Math.random().toString(36).substring(2, 6).toUpperCase();
+        }
+
+        // Подключение комнаты и настройка межвкладочного BroadcastChannel
+        function initRoom(code) {
+            if (syncChannel) {
+                syncChannel.close();
+            }
+
+            // Автоочистка: если старая комната была пустой, стираем её данные
+            if (currentRoomCode && currentRoomCode !== code) {
+                const oldData = localStorage.getItem(`room_${currentRoomCode}`);
+                if (oldData) {
+                    const parsed = JSON.parse(oldData);
+                    if (!parsed.lines || parsed.lines.length === 0) {
+                        localStorage.removeItem(`room_${currentRoomCode}`);
+                    }
+                }
+            }
+
+            currentRoomCode = code;
+            roomCodeInput.value = currentRoomCode;
+
+            // Создаем канал для связывания вкладок в реальном времени
+            syncChannel = new BroadcastChannel(`sync_room_${currentRoomCode}`);
+            
+            syncChannel.onmessage = (event) => {
+                if (event.data && event.data.type === 'UPDATE_DATA') {
+                    renderPage(event.data.payload);
+                }
+            };
+
+            // Подгружаем данные или создаем дефолтную разметку
+            const savedData = localStorage.getItem(`room_${currentRoomCode}`);
+            if (savedData) {
+                renderPage(JSON.parse(savedData));
+            } else {
+                const defaultData = {
+                    imgUrl: "https://unsplash.com",
+                    fontSize: "16",
+                    fontFamily: "'Segoe UI', sans-serif",
+                    borderColor: "#007bff",
+                    lines: [
+                        { text: "Это первая строка текста. Нажмите E для настроек.", textColor: "#333333", bgColor: "#ffffff" },
+                        { text: "Скопируйте код из окна настроек на другую вкладку для теста синхронизации!", textColor: "#2b579a", bgColor: "#f0f4f8" }
+                    ]
+                };
+                localStorage.setItem(`room_${currentRoomCode}`, JSON.stringify(defaultData));
+                renderPage(defaultData);
+            }
+        }
+
+        // Вывод актуальных стилей и блоков на экран
+        function renderPage(data) {
+            mainImage.src = data.imgUrl;
+            document.documentElement.style.setProperty('--font-size', data.fontSize + 'px');
+            document.documentElement.style.setProperty('--font-family', data.fontFamily);
+            document.documentElement.style.setProperty('--border-color', data.borderColor);
+
+            contentArea.innerHTML = '';
+            data.lines.forEach(line => {
+                const newBlock = document.createElement('div');
+                newBlock.className = 'text-block';
+                newBlock.innerText = line.text;
+                newBlock.style.color = line.textColor;
+                newBlock.style.backgroundColor = line.bgColor;
+                contentArea.appendChild(newBlock);
+            });
+        }
+
+        // Метод сопряжения вкладок при вводе чужого кода
+        connectRoomBtn.addEventListener('click', () => {
+            const targetCode = roomCodeInput.value.trim().toUpperCase();
+            if (targetCode && targetCode.length === 4) {
+                initRoom(targetCode);
+                modalOverlay.classList.remove('active');
+            } else {
+                alert('Код комнаты должен состоять ровно из 4 знаков!');
+            }
+        });
+
+        // Отслеживание клавиатурного нажатия клавиши E / У
+        document.addEventListener('keydown', function(event) {
+            const key = event.key.toLowerCase();
+            if (key === 'e' || key === 'у') {
+                if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'SELECT') {
+                    return;
+                }
+                event.preventDefault();
+                openModal();
+            }
+        });
+
+        function openModal() {
+            const currentData = JSON.parse(localStorage.getItem(`room_${currentRoomCode}`));
+            
+            imgUrlInput.value = currentData.imgUrl;
+            fontSizeInput.value = currentData.fontSize;
+            fontFamilySelect.value = currentData.fontFamily;
+            borderColorInput.value = currentData.borderColor;
+            roomCodeInput.value = currentRoomCode;
+
+            linesContainer.innerHTML = '';
+            currentData.lines.forEach(line => {
+                createLineInputField(line.text, line.textColor, line.bgColor);
+            });
+
+            if (currentData.lines.length === 0) {
+                createLineInputField('', '#333333', '#ffffff');
+            }
+
+            modalOverlay.classList.add('active');
+        }
+
+        // Генерация полей изменения текста и цвета в модальном окне
+        function createLineInputField(text, textColor, bgColor) {
+            const lineItem = document.createElement('div');
+            lineItem.className = 'line-item';
+            
+            const mainRow = document.createElement('div');
+            mainRow.className = 'line-item-main';
+            
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.placeholder = "Введите текст строки...";
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'btn btn-danger';
+            deleteBtn.innerText = 'Удалить';
+            deleteBtn.onclick = function() { lineItem.remove(); };
+            
+            mainRow.appendChild(textarea);
+            mainRow.appendChild(deleteBtn);
+            
+            const colorsRow = document.createElement('div');
+            colorsRow.className = 'line-colors';
+            
+            const txtColorDiv = document.createElement('div');
+            txtColorDiv.innerHTML = `<label>Цвет текста:</label>`;
+            const txtColorInp = document.createElement('input');
+            txtColorInp.type = 'color';
+            txtColorInp.className = 'row-text-color';
+            txtColorInp.value = textColor;
+            txtColorDiv.appendChild(txtColorInp);
+            
+            const bgColorDiv = document.createElement('div');
+            bgColorDiv.innerHTML = `<label>Цвет фона:</label>`;
+            const bgColorInp = document.createElement('input');
+            bgColorInp.type = 'color';
+            bgColorInp.className = 'row-bg-color';
+            bgColorInp.value = bgColor;
+            bgColorDiv.appendChild(bgColorInp);
+            
+            colorsRow.appendChild(txtColorDiv);
+            colorsRow.appendChild(bgColorDiv);
+            
+            lineItem.appendChild(mainRow);
+            lineItem.appendChild(colorsRow);
+            linesContainer.appendChild(lineItem);
+        }
+
+        addLineBtn.addEventListener('click', () => createLineInputField('', '#333333', '#ffffff'));
+        cancelBtn.addEventListener('click', () => modalOverlay.classList.remove('active'));
+
+        // Сборка и отправка обновленного состояния во все вкладки
+        saveBtn.addEventListener('click', function() {
+            const updatedLines = [];
+            const lineItems = linesContainer.querySelectorAll('.line-item');
+            
+            lineItems.forEach(item => {
+                const text = item.querySelector('textarea').value;
+                const textColor = item.querySelector('.row-text-color').value;
+                const bgColor = item.querySelector('.row-bg-color').value;
+                
+                if (text.trim() !== '') {
+                    updatedLines.push({ text, textColor, bgColor });
+                }
+            });
+
+            const packet = {
+                imgUrl: imgUrlInput.value.trim() || mainImage.src,
+                fontSize: fontSizeInput.value || "16",
+                fontFamily: fontFamilySelect.value,
+                borderColor: borderColorInput.value,
+                lines: updatedLines
+            };
+
+            localStorage.setItem(`room_${currentRoomCode}`, JSON.stringify(packet));
+            renderPage(packet);
+
+            // Синхронизация с другими открытыми окнами
+            if (syncChannel) {
+                syncChannel.postMessage({
+                    type: 'UPDATE_DATA',
+                    payload: packet
+                });
+            }
+
+            modalOverlay.classList.remove('active');
+        });
+
+        // Запуск первой случайной сессии
+        initRoom(generateRoomCode());
+    </script>
+</body>
+</html>
