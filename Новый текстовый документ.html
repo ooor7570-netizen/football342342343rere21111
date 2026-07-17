@@ -1,9 +1,3 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Конструктор страницы с синхронизацией</title>
     <style>
         :root {
             --border-color: #007bff;
@@ -20,23 +14,10 @@
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
+            overflow-x: hidden; /* Защита от горизонтальной прокрутки */
         }
 
-        /* Индикатор текущего кода комнаты в углу сайта */
-        .sync-badge {
-            position: fixed;
-            top: 15px;
-            left: 15px;
-            background: rgba(0, 123, 255, 0.9);
-            color: white;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: bold;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            z-index: 900;
-        }
-
+        /* Адаптивный контейнер сайта */
         .site-container {
             width: 100%;
             max-width: 800px;
@@ -45,19 +26,31 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            box-sizing: border-box;
         }
 
+        /* Адаптивное изображение сверху */
         .top-image {
             width: 100%;
-            height: 350px;
+            height: auto;
+            min-height: 200px;
+            max-height: 380px;
             object-fit: cover;
             background-color: #e9ecef;
             display: block;
         }
 
+        /* Адаптивные отступы для контента */
         .content-area {
-            padding: 30px;
+            padding: 5vw; /* Отступы зависят от ширины экрана */
             flex-grow: 1;
+            box-sizing: border-box;
+        }
+
+        @media (min-width: 768px) {
+            .content-area {
+                padding: 30px; /* Фиксированные отступы на ПК */
+            }
         }
 
         .text-block {
@@ -68,8 +61,10 @@
             font-size: var(--font-size);
             line-height: 1.6;
             transition: all 0.3s ease;
+            word-wrap: break-word; /* Перенос длинных слов */
         }
 
+        /* Адаптивное модальное окно */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -93,13 +88,24 @@
 
         .modal-window {
             background: white;
-            padding: 25px;
+            padding: 20px;
             border-radius: 12px;
-            width: 90%;
+            width: 92%;
             max-width: 650px;
-            max-height: 85vh;
+            max-height: 90vh;
             overflow-y: auto;
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 480px) {
+            .modal-window {
+                width: 100%;
+                height: 100%;
+                max-height: 100vh;
+                border-radius: 0; /* На смартфонах во весь экран */
+                padding: 15px;
+            }
         }
 
         .modal-window h2 {
@@ -107,6 +113,7 @@
             color: #333;
             border-bottom: 2px solid #eee;
             padding-bottom: 10px;
+            font-size: 20px;
         }
 
         .form-group {
@@ -124,10 +131,11 @@
         .form-group input[type="text"],
         .form-group select {
             width: 100%;
-            padding: 8px;
+            padding: 10px;
             border: 1px solid #ccc;
             border-radius: 4px;
             box-sizing: border-box;
+            font-size: 15px; /* Удобный размер для кликов на смартфонах */
         }
 
         .sync-input-group {
@@ -137,11 +145,12 @@
 
         .lines-management {
             border: 1px solid #ddd;
-            padding: 15px;
+            padding: 12px;
             border-radius: 6px;
             background: #fafafa;
         }
 
+        /* Элемент строки */
         .line-item {
             background: white;
             border: 1px solid #e0e0e0;
@@ -150,7 +159,7 @@
             margin-bottom: 12px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 10px;
         }
 
         .line-item-main {
@@ -162,15 +171,18 @@
         .line-item textarea {
             flex-grow: 1;
             resize: vertical;
-            height: 50px;
+            height: 60px;
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
             box-sizing: border-box;
+            font-size: 14px;
         }
 
+        /* Адаптивные палитры внутри строк */
         .line-colors {
             display: flex;
+            flex-wrap: wrap; /* Перенос палитр на новую строку, если мало места */
             gap: 15px;
             align-items: center;
             font-size: 13px;
@@ -180,32 +192,36 @@
         .line-colors div {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 8px;
         }
 
         .line-colors input[type="color"] {
-            width: 30px;
-            height: 25px;
+            width: 35px;
+            height: 28px;
             border: 1px solid #ccc;
-            border-radius: 3px;
+            border-radius: 4px;
             cursor: pointer;
             padding: 0;
         }
 
         .btn {
-            padding: 8px 15px;
+            padding: 10px 16px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
             transition: background 0.2s;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .btn-primary { background: #007bff; color: white; }
         .btn-primary:hover { background: #0056b3; }
         .btn-danger { background: #dc3545; color: white; }
         .btn-danger:hover { background: #bd2130; }
-        .btn-success { background: #28a745; color: white; padding: 6px 12px; font-size: 13px; }
+        .btn-success { background: #28a745; color: white; padding: 8px 12px; font-size: 13px; }
         .btn-success:hover { background: #218838; }
 
         .modal-actions {
@@ -216,17 +232,23 @@
             border-top: 1px solid #eee;
             padding-top: 15px;
         }
+        
+        @media (max-width: 480px) {
+            .modal-actions {
+                flex-direction: column; /* Кнопки "Применить" и "Отмена" встают друг под друга на мобилках */
+            }
+            .modal-actions .btn {
+                width: 100%;
+            }
+        }
     </style>
-</head>
 <body>
-
-    <!-- Индикатор текущей комнаты -->
 
     <!-- Основной сайт -->
     <div class="site-container">
         <img id="mainImage" class="top-image" src="https://unsplash.com" alt="Top Image">
         <div class="content-area" id="contentArea">
-            <!-- Сюда данные будут загружаться автоматически из JavaScript -->
+            <!-- Сюда данные загружаются автоматически из JavaScript -->
         </div>
     </div>
 
