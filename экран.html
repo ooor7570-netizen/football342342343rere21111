@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Характеристики экрана</title>
+    <style>
+        body {
+            background-color: white;
+            color: black;
+            font-family: monospace;
+            /* Текст масштабируется от ширины экрана */
+            font-size: 3.5vw; 
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            box-sizing: border-box;
+            padding: 20px;
+            text-align: center;
+        }
+        div {
+            margin: 1.5vh 0;
+            line-height: 1.2;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="physical-resolution">Физические пиксели: ...</div>
+    <div id="logical-resolution">Логические пиксели: ...</div>
+    <div id="aspect-ratio">Соотношение сторон: ...</div>
+    <div id="viewport">Окно браузера: ...</div>
+
+    <script>
+        function gcd(a, b) {
+            return b === 0 ? a : gcd(b, a % b);
+        }
+
+        function getClosestAspect(w, h) {
+            const ratio = w / h;
+            const commonRatios = [
+                { name: "16:9", val: 16/9 },
+                { name: "16:10", val: 16/10 },
+                { name: "21:9", val: 21/9 },
+                { name: "4:3", val: 4/3 },
+                { name: "3:2", val: 3/2 }
+            ];
+            
+            let closest = commonRatios[0];
+            let minDiff = Math.abs(ratio - closest.val);
+            
+            for (let i = 1; i < commonRatios.length; i++) {
+                let diff = Math.abs(ratio - commonRatios[i].val);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closest = commonRatios[i];
+                }
+            }
+            return minDiff < 0.05 ? closest.name : `${w}:${h}`;
+        }
+
+        function updateScreenInfo() {
+            // Логические пиксели (размер экрана в системе координат CSS)
+            const cssWidth = window.screen.width;
+            const cssHeight = window.screen.height;
+
+            // Реальные физические пиксели (матрица монитора)
+            const screenWidth = cssWidth * window.devicePixelRatio;
+            const screenHeight = cssHeight * window.devicePixelRatio;
+            
+            // Расчет соотношения сторон
+            const divisor = gcd(screenWidth, screenHeight);
+            const rawAspectW = screenWidth / divisor;
+            const rawAspectH = screenHeight / divisor;
+            const aspectString = getClosestAspect(rawAspectW, rawAspectH);
+
+            // Текущий размер окна браузера
+            const viewWidth = window.innerWidth;
+            const viewHeight = window.innerHeight;
+
+            // Вывод на экран
+            document.getElementById('physical-resolution').textContent = `Физическое разрешение: ${screenWidth} x ${screenHeight} px`;
+            document.getElementById('logical-resolution').textContent = `Логическое разрешение: ${cssWidth} x ${cssHeight} px`;
+            document.getElementById('aspect-ratio').textContent = `Соотношение сторон: ${aspectString}`;
+            document.getElementById('viewport').textContent = `Размер окна (viewport): ${viewWidth} x ${viewHeight} px`;
+        }
+
+        window.addEventListener('load', updateScreenInfo);
+        window.addEventListener('resize', updateScreenInfo);
+    </script>
+
+</body>
+</html>
