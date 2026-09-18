@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Sync Screens</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: system-ui, sans-serif;
+    background: #111; color: #eee;
+    overflow: hidden;
+  }
+
+  /* Экран-заглушка (idle) */
+  #idle {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: #000; z-index: 1;
+    overflow: hidden;
+  }
+  #idle iframe {
+    width: 100%; height: 100%; border: 0; display: block;
+  }
+  #idle .empty {
+    color: #555; font-size: 4vw; user-select: none;
+  }
+
+  /* Контент экрана (iframe) */
+  #content {
+    position: fixed; inset: 0;
+    display: none; z-index: 2;
+    background: #000;
+  }
+  #content iframe {
+    width: 100%; height: 100%; border: 0; display: block;
+  }
+
+  /* Мастер-панель */
+  #master {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: rgba(20,20,25,0.95);
+    border-bottom: 1px solid #333;
+    padding: 10px 14px;
+    z-index: 1000;
+    display: none;
+    max-height: 90vh; overflow-y: auto;
+    backdrop-filter: blur(6px);
+  }
+  #master.open { display: block; }
+  #master h2 { margin: 0 0 10px; font-size: 16px; }
+  #master .row {
+    display: flex; gap: 8px; align-items: center;
+    margin-bottom: 6px; flex-wrap: wrap;
+  }
+  #master label { font-size: 12px; opacity: .8; min-width: 90px; }
+  #master input[type="text"], #master input[type="number"] {
+    flex: 1; min-width: 120px;
+    padding: 5px 8px; font-size: 12px;
+    background: #1c1c22; color: #eee;
+    border: 1px solid #333; border-radius: 4px;
+  }
+  #master input[type="checkbox"] { transform: scale(1.2); }
+  #master button {
+    padding: 5px 10px; font-size: 12px;
+    background: #2a2a35; color: #eee;
+    border: 1px solid #444; border-radius: 4px;
+    cursor: pointer;
+  }
+  #master button:hover { background: #3a3a48; }
+  #master button.primary { background: #2b6cb0; border-color: #2b6cb0; }
+  #master button.danger { background: #822; border-color: #a33; }
+  .screen-block {
+    border: 1px solid #2a2a33;
+    border-radius: 6px;
+    padding: 8px;
+    margin-bottom: 8px;
+    background: #17171c;
+  }
+  .screen-block.excluded { border-color: #6a2; }
+  .screen-block.current { box-shadow: 0 0 0 2px #2b6cb0 inset; }
+
+  /* Инфо-плашка снизу */
+  #hud {
+    position: fixed; bottom: 12px; right: 12px;
+    font-size: 12px; padding: 6px 10px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid #333; border-radius: 6px;
+    z-index: 900; pointer-events: none;
+    color: #9cf;
+  }
+
+  /* Индикатор "мастер" */
+  #masterBadge {
+    position: fixed; top: 12px; left: 12px;
+    padding: 6px 10px; font-size: 12px;
+    background: #2b6cb0; color: #fff;
+    border-radius: 6px; z-index: 900;
+    display: none; pointer-events: none;
+  }
+
+  /* Индикатор "forceIdle" */
+  #idleBadge {
+    position: fixed; top: 12px; right: 12px;
+    padding: 6px 10px; font-size: 12px;
+    background: #6a2; color: #fff;
+    border-radius: 6px; z-index: 900;
+    display: none; pointer-events: none;
+  }
+
+  /* Подсказка для номера экрана */
+  #hint {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 20px; padding: 14px 22px;
+    background: rgba(0,0,0,0.7);
+    border: 1px solid #444; border-radius: 10px;
+    z-index: 999; color: #eee;
+    pointer-events: none; opacity: 0;
+    transition: opacity .3s;
+  }
+  #hint.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- Экран-заглушка -->
+<div id="idle"><div class="empty">S T A N D B Y</div></div>
+
+<!-- Основной контент экрана -->
+<div id="content"><iframe id="contentFrame"></iframe></div>
+
+<!-- Мастер-панель -->
+<div id="master">
+  <h2>Мастер-экран</h2>
+
+  <div class="row">
+    <label>Заглушка URL</label>
+    <input type="text" id="idleUrl" placeholder="https://example.com/idle">
+    <button id="applyIdle" class="primary">Применить</button>
+  </div>
+
+  <div class="row">
+    <label>ID экрана</label>
+    <input type="number" id="screenId" value="1" min="1">
+    <span style="font-size:12px;opacity:.7">Сейчас: <b id="currentId">—</b></span>
+  </div>
+
+  <div class="row">
+    <label>URL экрана</label>
+    <input type="text" id="screenUrl" placeholder="https://example.com/screen">
+    <button id="applyScreen" class="primary">Применить</button>
+  </div>
+
+  <div class="row">
+    <label>Исключение</label>
+    <input type="checkbox" id="excludeScreen">
+    <span style="font-size:12px;opacity:.7">Не показывать заглушку на этом экране</span>
+  </div>
+
+  <div id="screensList"></div>
+
+  <div class="row" style="margin-top:10px;">
+    <button id="showNumber" class="primary">Показать номер</button>
+    <button id="showIdle" class="primary">Показать заглушку</button>
+    <button id="hideIdle">Скрыть заглушку</button>
+    <button id="clearAll" class="danger">Сбросить всё</button>
+    <button id="closeMaster">Закрыть</button>
+  </div>
+</div>
+
+<div id="masterBadge">MASTER</div>
+<div id="idleBadge">IDLE FORCED</div>
+<div id="hud">ID: <span id="hudId">—</span></div>
+<div id="hint">Нажмите <b>E</b> чтобы стать мастером</div>
+
+<script>
+(() => {
+  const CHANNEL = 'sync-screens';
+  const KEY = 'sync-screens-state';
+
+  // ---------- Состояние ----------
+  let state = {
+    idleUrl: '',
+    screens: {},
+    forceIdle: false,   // принудительно показывать заглушку на всех (кроме исключений и мастера)
+    masterIds: {}       // id экранов, которые сейчас мастер (чтобы их не накрывало)
+  };
+
+  // Мой ID экрана
+  let myId = null;
+  let isMaster = false;
+
+  const idleEl = document.getElementById('idle');
+  const contentEl = document.getElementById('content');
+  const contentFrame = document.getElementById('contentFrame');
+
+  const masterEl = document.getElementById('master');
+  const masterBadge = document.getElementById('masterBadge');
+  const idleBadge = document.getElementById('idleBadge');
+  const hudId = document.getElementById('hudId');
+  const hintEl = document.getElementById('hint');
+
+  const idleUrlInput = document.getElementById('idleUrl');
+  const applyIdleBtn = document.getElementById('applyIdle');
+
+  const screenIdInput = document.getElementById('screenId');
+  const currentIdEl = document.getElementById('currentId');
+  const screenUrlInput = document.getElementById('screenUrl');
+  const applyScreenBtn = document.getElementById('applyScreen');
+  const excludeScreenInput = document.getElementById('excludeScreen');
+  const screensList = document.getElementById('screensList');
+  const showNumberBtn = document.getElementById('showNumber');
+  const showIdleBtn = document.getElementById('showIdle');
+  const hideIdleBtn = document.getElementById('hideIdle');
+  const clearAllBtn = document.getElementById('clearAll');
+  const closeMasterBtn = document.getElementById('closeMaster');
+
+  // ---------- Утилиты ----------
+  const bc = ('BroadcastChannel' in window)
+    ? new BroadcastChannel(CHANNEL)
+    : null;
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) state = JSON.parse(raw);
+    } catch(e) { console.warn('load fail', e); }
+    if (!state.screens) state.screens = {};
+    if (typeof state.forceIdle !== 'boolean') state.forceIdle = false;
+    if (!state.masterIds) state.masterIds = {};
+  }
+
+  function saveState(broadcast = true) {
+    localStorage.setItem(KEY, JSON.stringify(state));
+    if (broadcast && bc) bc.postMessage({ type: 'state', state });
+  }
+
+  // ---------- Идентификация экрана ----------
+  function allocateId() {
+    const used = new Set(Object.keys(state.screens).map(Number));
+    let n = 1;
+    while (used.has(n)) n++;
+    return n;
+  }
+
+  function fromHash() {
+    const m = location.hash.match(/^#screen=(\d+)$/);
+    return m ? parseInt(m[1], 10) : null;
+  }
+
+  function setHash(id) {
+    if (location.hash !== '#screen=' + id) {
+      history.replaceState(null, '', '#screen=' + id);
+    }
+  }
+
+  // ---------- Отрисовка ----------
+  function renderIdle() {
+    const excluded = myId != null && state.screens[myId]?.exclude;
+    const isMasterScreen = isMaster;
+
+    // Логика показа заглушки:
+    // - если экран в исключении → не показываем
+    // - если экран сейчас мастер → не показываем
+    // - если включён forceIdle → показываем всем остальным
+    // - иначе показываем только тем, у кого нет своего контента
+    let shouldShowIdle;
+    if (excluded || isMasterScreen) {
+      shouldShowIdle = false;
+    } else if (state.forceIdle) {
+      shouldShowIdle = true;
+    } else {
+      shouldShowIdle = !contentEl.dataset.active;
+    }
+
+    // Строим/обновляем iframe заглушки
+    let idleFrame = idleEl.querySelector('iframe');
+    if (state.idleUrl) {
+      if (!idleFrame) {
+        idleEl.innerHTML = '';
+        idleFrame = document.createElement('iframe');
+        idleEl.appendChild(idleFrame);
+      }
+      if (idleFrame.dataset.src !== state.idleUrl) {
+        idleFrame.dataset.src = state.idleUrl;
+        idleFrame.src = state.idleUrl;
+      }
+    } else {
+      if (idleFrame) idleFrame.remove();
+      if (!idleEl.querySelector('.empty')) {
+        idleEl.innerHTML = '<div class="empty">S T A N D B Y</div>';
+      }
+    }
+    idleEl.style.display = shouldShowIdle ? 'flex' : 'none';
+    idleBadge.style.display = state.forceIdle ? 'block' : 'none';
+  }
+
+  function renderContent() {
+    const data = myId != null ? state.screens[myId] : null;
+    const url = data?.url || '';
+
+    // Если включена принудительная заглушка — контент скрываем
+    // (но не на исключениях и не на мастере)
+    const excluded = myId != null && state.screens[myId]?.exclude;
+    const hideContent = state.forceIdle && !excluded && !isMaster;
+
+    if (url && !hideContent) {
+      if (contentFrame.dataset.src !== url) {
+        contentFrame.dataset.src = url;
+        contentFrame.src = url;
+      }
+      contentEl.dataset.active = '1';
+      contentEl.style.display = 'block';
+    } else {
+      delete contentEl.dataset.active;
+      contentEl.style.display = 'none';
+    }
+  }
+
+  function renderMasterPanel() {
+    idleUrlInput.value = state.idleUrl || '';
+    currentIdEl.textContent = myId ?? '—';
+    if (myId != null) {
+      screenIdInput.value = myId;
+      const d = state.screens[myId] || {};
+      screenUrlInput.value = d.url || '';
+      excludeScreenInput.checked = !!d.exclude;
+    }
+
+    // Список экранов
+    screensList.innerHTML = '';
+    const ids = Object.keys(state.screens).map(Number).sort((a,b)=>a-b);
+    if (ids.length === 0) {
+      screensList.innerHTML = '<div style="font-size:12px;opacity:.6;padding:4px;">Пока нет экранов</div>';
+    }
+    for (const id of ids) {
+      const d = state.screens[id];
+      const block = document.createElement('div');
+      block.className = 'screen-block'
+        + (d.exclude ? ' excluded' : '')
+        + (id === myId ? ' current' : '');
+      block.innerHTML = `
+        <div class="row">
+          <label>ID</label>
+          <b style="min-width:30px;">${id}</b>
+          <span style="font-size:11px;opacity:.6;">размер: ${d.size || '—'}</span>
+          ${id === myId ? '<span style="font-size:11px;color:#9cf;">(этот экран)</span>' : ''}
+        </div>
+        <div class="row">
+          <input type="text" data-url="${id}" value="${escapeAttr(d.url||'')}" placeholder="URL">
+          <button data-apply="${id}" class="primary">OK</button>
+          <label style="min-width:auto;display:flex;gap:4px;align-items:center;">
+            <input type="checkbox" data-exclude="${id}" ${d.exclude?'checked':''}> исключ.
+          </label>
+          <button data-del="${id}" class="danger">×</button>
+        </div>
+      `;
+      screensList.appendChild(block);
+    }
+  }
+
+  function escapeAttr(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  }
+
+  function renderAll() {
+    renderContent();
+    renderIdle();
+    if (isMaster) renderMasterPanel();
+    hudId.textContent = myId ?? '—';
+  }
+
+  // ---------- Мастер ----------
+  function becomeMaster() {
+    isMaster = true;
+    masterEl.classList.add('open');
+    masterBadge.style.display = 'block';
+    renderMasterPanel();
+    renderAll();
+  }
+
+  function leaveMaster() {
+    isMaster = false;
+    masterEl.classList.remove('open');
+    masterBadge.style.display = 'none';
+    renderAll();
+  }
+
+  // ---------- Обработчики мастер-панели ----------
+  applyIdleBtn.onclick = () => {
+    state.idleUrl = idleUrlInput.value.trim();
+    saveState();
+    renderAll();
+  };
+
+  applyScreenBtn.onclick = () => {
+    const id = parseInt(screenIdInput.value, 10);
+    if (!id || id < 1) return;
+    const url = screenUrlInput.value.trim();
+    if (!state.screens[id]) state.screens[id] = {};
+    state.screens[id].url = url;
+    state.screens[id].size = window.innerWidth + 'x' + window.innerHeight;
+    if (myId === id) setHash(id);
+    saveState();
+    renderAll();
+  };
+
+  excludeScreenInput.onchange = () => {
+    if (myId == null) return;
+    if (!state.screens[myId]) state.screens[myId] = {};
+    state.screens[myId].exclude = excludeScreenInput.checked;
+    saveState();
+    renderAll();
+  };
+
+  screensList.addEventListener('click', (e) => {
+    const t = e.target;
+    if (t.dataset.apply) {
+      const id = t.dataset.apply;
+      const inp = screensList.querySelector(`input[data-url="${id}"]`);
+      state.screens[id] = state.screens[id] || {};
+      state.screens[id].url = inp.value.trim();
+      saveState();
+      renderAll();
+    }
+    if (t.dataset.del) {
+      const id = t.dataset.del;
+      delete state.screens[id];
+      saveState();
+      renderAll();
+    }
+  });
+
+  screensList.addEventListener('change', (e) => {
+    const t = e.target;
+    if (t.dataset.exclude) {
+      const id = t.dataset.exclude;
+      state.screens[id] = state.screens[id] || {};
+      state.screens[id].exclude = t.checked;
+      saveState();
+      renderAll();
+    }
+  });
+
+  showNumberBtn.onclick = () => {
+    const w = window.innerWidth, h = window.innerHeight;
+    const same = [];
+    for (const [id, d] of Object.entries(state.screens)) {
+      if (d.size === `${w}x${h}`) same.push(Number(id));
+    }
+    same.sort((a,b)=>a-b);
+    if (!same.length && myId != null) same.push(myId);
+
+    let text;
+    if (same.length === 1) {
+      text = String(same[0]);
+    } else {
+      text = same.join(', ');
+    }
+
+    showHint(text);
+    if (bc) bc.postMessage({ type: 'show-number', text });
+  };
+
+  showIdleBtn.onclick = () => {
+    state.forceIdle = true;
+    saveState();
+    if (bc) bc.postMessage({ type: 'force-idle', value: true });
+    renderAll();
+  };
+
+  hideIdleBtn.onclick = () => {
+    state.forceIdle = false;
+    saveState();
+    if (bc) bc.postMessage({ type: 'force-idle', value: false });
+    renderAll();
+  };
+
+  clearAllBtn.onclick = () => {
+    if (!confirm('Сбросить всё состояние?')) return;
+    state = { idleUrl: '', screens: {}, forceIdle: false, masterIds: {} };
+    saveState();
+    renderAll();
+  };
+
+  closeMasterBtn.onclick = leaveMaster;
+
+  function showHint(text) {
+    hintEl.innerHTML = 'Номер экрана: <b>' + text + '</b>';
+    hintEl.classList.add('show');
+    clearTimeout(showHint._t);
+    showHint._t = setTimeout(() => hintEl.classList.remove('show'), 2500);
+  }
+
+  // ---------- Клавиатура ----------
+  window.addEventListener('keydown', (e) => {
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea') return;
+
+    if (e.key === 'e' || e.key === 'E' || e.key === 'у' || e.key === 'У') {
+      if (isMaster) leaveMaster();
+      else becomeMaster();
+    }
+    if (e.key === 'Escape' && isMaster) leaveMaster();
+  });
+
+  // ---------- BroadcastChannel ----------
+  if (bc) {
+    bc.onmessage = (ev) => {
+      const msg = ev.data;
+      if (msg.type === 'state') {
+        state = msg.state;
+        if (!state.screens) state.screens = {};
+        if (typeof state.forceIdle !== 'boolean') state.forceIdle = false;
+        renderAll();
+      } else if (msg.type === 'show-number') {
+        showHint(msg.text);
+      } else if (msg.type === 'request-state') {
+        saveState(true);
+      } else if (msg.type === 'force-idle') {
+        state.forceIdle = msg.value;
+        renderAll();
+      }
+    };
+  }
+
+  // ---------- Storage event ----------
+  window.addEventListener('storage', (e) => {
+    if (e.key === KEY && e.newValue) {
+      try {
+        state = JSON.parse(e.newValue);
+        if (!state.screens) state.screens = {};
+        if (typeof state.forceIdle !== 'boolean') state.forceIdle = false;
+        renderAll();
+      } catch(_) {}
+    }
+  });
+
+  // ---------- Инициализация ----------
+  loadState();
+
+  const hashId = fromHash();
+  if (hashId) {
+    myId = hashId;
+  } else {
+    myId = allocateId();
+    setHash(myId);
+  }
+
+  if (!state.screens[myId]) state.screens[myId] = {};
+  state.screens[myId].size = window.innerWidth + 'x' + window.innerHeight;
+  saveState();
+
+  renderAll();
+
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (myId != null) {
+        state.screens[myId] = state.screens[myId] || {};
+        state.screens[myId].size = window.innerWidth + 'x' + window.innerHeight;
+        saveState();
+      }
+      renderAll();
+    }, 300);
+  });
+
+  if (bc) bc.postMessage({ type: 'request-state' });
+})();
+</script>
+</body>
+</html>
