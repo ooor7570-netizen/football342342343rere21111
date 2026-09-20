@@ -9,7 +9,7 @@
             margin: 0; padding: 0; width: 100%; height: 100%;
             font-family: 'Segoe UI', Arial, sans-serif; overflow: hidden; background: #000;
         }
-        /* Обёртка контента для обычных экранов */
+        /* Обёртка контента для экранов */
         #content-wrapper {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden;
         }
@@ -109,7 +109,7 @@
         <iframe id="content-frame" src="about:blank"></iframe>
     </div>
 
-    <!-- Первичная плашка выбора ID -->
+    <!-- Настройка ID -->
     <div id="setup-overlay">
         <div class="container">
             <h2>Настройка Экрана</h2>
@@ -123,7 +123,7 @@
         </div>
     </div>
 
-    <!-- ПОЛНОЕКРАННЫЙ МАСТЕР -->
+    <!-- ПОЛНОЭКРАННЫЙ МАСТЕР -->
     <div id="master-panel">
         <div class="panel-header">
             <h3>Панель Управления Мастера (Полноэкранный режим) 👑</h3>
@@ -131,7 +131,6 @@
         </div>
         
         <div class="panel-content">
-            <!-- Левый сайдбар: Общие настройки -->
             <div class="sidebar-left">
                 <div class="section-title" style="margin-top:0;">Глобальная заглушка</div>
                 <div class="form-group">
@@ -143,23 +142,19 @@
                     <button onclick="globalStubToggle(false)" class="btn-success">🟢 ВЫКЛ ДЛЯ ВСЕХ</button>
                 </div>
                 
-                <div class="section-title">Масштаб материала</div>
-                <div class="form-group">
-                    <label>Увеличение по высоте (коэффициент):</label>
-                    <input type="number" id="master-scale-y" value="1.0" min="0.1" step="0.1" onchange="sendGlobalScaleY()">
-                    <p class="hint">Значение 1.0 — стандартный размер. 1.5 — растянуть по высоте на 150%, 2.0 — на 200%.</p>
+                <div class="section-title">Режим масштаба</div>
+                <div style="background:#25252b; padding:10px; border-radius:4px; font-size:13px; color:#aaa; line-height:1.4;">
+                    ℹ️ <strong>Авто-высота активна:</strong> Все фреймы с рабочим контентом автоматически растягиваются по вертикали, заполняя 100% высоты экрана.
                 </div>
                 
                 <div class="section-title">Тестирование систем</div>
-                <button onclick="triggerIdentify()" class="btn-secondary" style="width:100%;">Вывести номера на экраны</button>
+                <!-- Кнопка-переключатель номеров -->
+                <button id="btn-toggle-numbers" onclick="toggleNumbersDisplay()" class="btn-secondary" style="width:100%;">Показать номера экранов</button>
             </div>
             
-            <!-- Основная зона: Список всех экранов -->
             <div class="main-zone">
                 <div class="section-title" style="margin-top:0; margin-bottom:15px;">Список подключенных мониторов в реальном времени</div>
-                <div id="master-screens-list" class="screens-grid">
-                    <!-- Карточки будут добавлены динамически -->
-                </div>
+                <div id="master-screens-list" class="screens-grid"></div>
             </div>
         </div>
     </div>
@@ -169,6 +164,7 @@
         let myIdx = 1;
         let mySubIdx = 1;
         let isMaster = false;
+        let numbersVisibleGlobal = false; // Глобальный триггер видимости номеров
         
         const getDisplayWidth = () => window.innerWidth;
         const getDisplayHeight = () => window.innerHeight;
@@ -188,7 +184,6 @@
             });
         }
 
-        // Активация Мастера на весь экран при нажатии "E"
         window.addEventListener('keydown', (e) => {
             if (e.key.toLowerCase() === 'e' || e.key.toLowerCase() === 'у') {
                 if (document.activeElement.tagName === 'INPUT') return;
@@ -210,7 +205,6 @@
 
         window.discoveredScreens = [];
 
-        // Динамическая генерация карточек в полноэкранной сетке
         function renderMasterControls() {
             const listDiv = document.getElementById('master-screens-list');
             listDiv.innerHTML = '';
@@ -257,7 +251,6 @@
             });
         }
 
-        // Отправка персональных параметров экрана
         function sendConfigToScreen(idKey) {
             const scr = window.discoveredScreens.find(s => s.idKey === idKey);
             if (!scr) return;
@@ -276,15 +269,24 @@
             });
         }
 
-        // Передача глобального коэффициента масштабирования по высоте
-        function sendGlobalScaleY() {
-            const scaleY = parseFloat(document.getElementById('master-scale-y').value) || 1.0;
+        // Переключение отображения плашек номеров (Показать/Скрыть по повторному нажатию)
+        function toggleNumbersDisplay() {
+            numbersVisibleGlobal = !numbersVisibleGlobal;
+            const btn = document.getElementById('btn-toggle-numbers');
+            
+            if (numbersVisibleGlobal) {
+                btn.innerText = "Скрыть номера экранов";
+                btn.className = "btn-danger";
+            } else {
+                btn.innerText = "Показать номера экранов";
+                btn.className = "btn-secondary";
+            }
+
             channel.postMessage({
-                type: 'SET_GLOBAL_SCALE_Y',
-                scaleY: scaleY
+                type: 'TOGGLE_NUMBERS_VIEW',
+                visible: numbersVisibleGlobal
             });
         }
-        // Глобальное переключение режима заглушек
         function globalStubToggle(enable) {
             const stubUrl = document.getElementById('master-stub-url').value || 'about:blank';
             
@@ -303,7 +305,6 @@
             });
         }
 
-        // Индивидуальное переключение режима заглушки
         function setIndividualStub(idKey, enable) {
             const scr = window.discoveredScreens.find(s => s.idKey === idKey);
             if (!scr) return;
@@ -321,10 +322,6 @@
             });
         }
 
-        function triggerIdentify() {
-            channel.postMessage({ type: 'SHOW_NUMBERS' });
-        }
-
 
         // ==========================================
         // ОБРАБОТКА СИГНАЛОВ НА СТОРОНЕ КЛИЕНТОВ
@@ -335,7 +332,6 @@
         
         let stubActive = false;
         let activeStubUrl = "about:blank";
-        let currentScaleY = 1.0; // Хранение текущего масштаба по высоте
 
         channel.onmessage = (event) => {
             const msg = event.data;
@@ -382,44 +378,41 @@
                 renderFrameContent();
             }
 
-            // Логика изменения масштаба высоты материала
-            if (msg.type === 'SET_GLOBAL_SCALE_Y') {
-                currentScaleY = msg.scaleY;
-                applyScaleTransforms();
-            }
-
-            if (msg.type === 'SHOW_NUMBERS') {
+            // Обработка тумблера включения/скрытия номеров экранов
+            if (msg.type === 'TOGGLE_NUMBERS_VIEW') {
                 const display = document.getElementById('screen-number-display');
-                display.style.display = 'block';
-                setTimeout(() => { display.style.display = 'none'; }, 3000);
+                display.style.display = msg.visible ? 'block' : 'none';
             }
         };
 
-        // Загрузка контента во фрейм
         function renderFrameContent() {
             const frame = document.getElementById('content-frame');
             
             if (stubActive) {
                 if (frame.src !== activeStubUrl) frame.src = activeStubUrl;
-            } else {
-                const targetUrl = clientUrl1 !== "about:blank" && clientUrl1 !== "" ? clientUrl1 : clientUrl2;
-                if (frame.src !== targetUrl) frame.src = targetUrl;
-            }
-            applyScaleTransforms();
-        }
-
-        // Применение CSS трансформации для увеличения материала по высоте
-        function applyScaleTransforms() {
-            const frame = document.getElementById('content-frame');
-            if (stubActive) {
-                // Для заглушек масштаб сбрасываем, чтобы картинка не искажалась
+                // Сбрасываем автоматическое растяжение для заглушек
                 frame.style.transform = 'none';
                 frame.style.height = '100%';
             } else {
-                // Растягиваем контент фрейма по вертикали на основе коэффициента мастера
-                frame.style.transform = `scaleY(${currentScaleY})`;
-                // Корректируем базовую высоту фрейма, чтобы избежать обрезки внутри контейнера
-                frame.style.height = (100 / currentScaleY) + '%';
+                const targetUrl = clientUrl1 !== "about:blank" && clientUrl1 !== "" ? clientUrl1 : clientUrl2;
+                if (frame.src !== targetUrl) frame.src = targetUrl;
+                
+                // АВТОМАТИЧЕСКОЕ УВЕЛИЧЕНИЕ ПО ВЫСОТЕ
+                // Ждем загрузки фрейма, чтобы рассчитать его физические пропорции
+                frame.onload = () => {
+                    const windowHeight = window.innerHeight;
+                    const frameBoundingHeight = frame.contentWindow ? frame.contentWindow.document.body.scrollHeight : windowHeight;
+                    
+                    if (frameBoundingHeight > 0 && frameBoundingHeight < windowHeight) {
+                        const autoScaleY = windowHeight / frameBoundingHeight;
+                        frame.style.transform = `scaleY(${autoScaleY})`;
+                        frame.style.height = (100 / autoScaleY) + '%';
+                    } else {
+                        // Если контент изначально больше или равен экрану, просто растягиваем на 100%
+                        frame.style.transform = 'none';
+                        frame.style.height = '100%';
+                    }
+                };
             }
         }
 
