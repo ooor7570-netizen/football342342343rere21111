@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Синхронизация Видеостены</title>
+    <style>
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            font-family: 'Segoe UI', Arial, sans-serif; overflow: hidden; background: #000;
+        }
+        #content-wrapper {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; display: block;
+        }
+        iframe {
+            position: absolute; border: none; pointer-events: none;
+        }
+        #setup-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15,15,15,0.95); color: #fff; display: flex;
+            flex-direction: column; align-items: center; justify-content: center; z-index: 5000;
+        }
+        .container {
+            background: #222; padding: 25px; border-radius: 8px; max-width: 450px; width: 90%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid #444;
+        }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; color: #ccc; }
+        input[type="number"], input[type="text"] { 
+            width: 100%; padding: 10px; box-sizing: border-box; background: #111; 
+            color: #fff; border: 1px solid #444; border-radius: 4px; transition: border 0.2s;
+        }
+        input:focus { border-color: #007bff; outline: none; }
+        button { 
+            background: #007bff; color: white; border: none; padding: 12px 15px; 
+            border-radius: 4px; cursor: pointer; width: 100%; font-size: 15px; font-weight: bold;
+        }
+        button:hover { background: #0056b3; }
+        .hint { color: #888; font-size: 12px; margin-top: 5px; line-height: 1.4; }
+
+        #screen-number-display {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(220, 53, 69, 0.95); color: white; padding: 25px 50px;
+            font-size: 6rem; font-weight: bold; border-radius: 12px; z-index: 9999;
+            display: none; text-shadow: 2px 2px 5px #000; box-shadow: 0 0 30px rgba(0,0,0,0.7);
+        }
+
+        #master-panel {
+            position: fixed; top: 10px; left: 10px; bottom: 10px; width: 380px;
+            background: rgba(24, 24, 28, 0.95); border: 1px solid #ffcc00; border-radius: 8px;
+            z-index: 4000; display: none; color: #fff; flex-direction: column;
+            box-shadow: 5px 0 25px rgba(0,0,0,0.5);
+        }
+        .panel-header { padding: 15px; border-bottom: 1px solid #333; background: #1e1e22; border-radius: 7px 7px 0 0; }
+        .panel-header h3 { margin: 0; color: #ffcc00; font-size: 18px; }
+        .panel-body { padding: 15px; flex: 1; overflow-y: auto; }
+        
+        .section-title { font-size: 13px; text-transform: uppercase; color: #888; letter-spacing: 1px; margin: 15px 0 8px 0; font-weight: bold; }
+        .btn-group { display: flex; gap: 5px; margin-bottom: 10px; }
+        .btn-sm { padding: 8px; font-size: 13px; font-weight: normal; }
+
+        #wall-canvas-container {
+            position: fixed; top: 10px; left: 400px; right: 10px; bottom: 10px;
+            background: #111; border: 2px dashed #444; border-radius: 8px;
+            z-index: 3900; display: none; overflow: hidden;
+        }
+        #canvas-viewport {
+            position: absolute; width: 100%; height: 100%; transform-origin: top left;
+        }
+        #material-boundary {
+            position: absolute; border: 3px solid #007bff; box-sizing: border-box;
+            background: rgba(0, 123, 255, 0.05); pointer-events: none;
+        }
+        #material-boundary::after {
+            content: 'Граница контента (URL)'; position: absolute; top: 5px; left: 5px;
+            color: #007bff; font-size: 12px; font-weight: bold; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 3px;
+        }
+        .overflow-line-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible;
+        }
+        .canvas-screen {
+            position: absolute; background: rgba(235, 145, 60, 0.25); border: 2px solid #eb913c;
+            color: #fff; cursor: move; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; box-sizing: border-box; font-weight: bold; user-select: none;
+            border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .canvas-screen .scr-res { font-size: 11px; font-weight: normal; color: #ccc; margin-top: 4px; }
+        
+        .canvas-screen[data-color="1"] { background: rgba(243, 243, 146, 0.3); border-color: #e2e257; }
+        .canvas-screen[data-color="2"] { background: rgba(240, 173, 114, 0.3); border-color: #f0ad72; }
+        .canvas-screen[data-color="3"] { background: rgba(135, 226, 150, 0.3); border-color: #5cb85c; }
+        .canvas-screen[data-color="4"] { background: rgba(119, 203, 241, 0.3); border-color: #5bc0de; }
+    </style>
+</head>
+<body>
+
+    <div id="screen-number-display">1,1</div>
+
+    <div id="content-wrapper">
+        <iframe id="content-frame" src="about:blank" style="width:100%; height:100%;"></iframe>
+    </div>
+
+    <div id="setup-overlay">
+        <div class="container">
+            <h2>Настройка Экрана</h2>
+            <p class="hint">Каждый монитор должен указать свой логический номер. Нажмите <strong>"E"</strong> для активации Режима Мастера.</p>
+            <hr style="border-color:#333;">
+            <div class="form-group">
+                <label>Порядковый номер экрана:</label>
+                <input type="number" id="screen-idx" value="1" min="1">
+            </div>
+            <button onclick="saveScreenConfig()">Подключить монитор</button>
+        </div>
+    </div>
+
+    <div id="wall-canvas-container">
+        <div id="canvas-viewport">
+            <div id="material-boundary"></div>
+        </div>
+    </div>
+
+    <div id="master-panel">
+        <div class="panel-header">
+            <h3>Конфигуратор Мастера 👑</h3>
+        </div>
+        <div class="panel-body">
+            <div class="form-group">
+                <label>Основной контент (Медиа URL):</label>
+                <input type="text" id="wall-media-url" placeholder="https://example.com" onchange="updateMaterialSize()">
+                <p class="hint">Вставьте ссылку, чтобы рассчитать размер материала.</p>
+            </div>
+
+            <div class="section-title">Масштаб материала</div>
+            <div class="form-group" style="display:flex; gap:10px; align-items:center;">
+                <label style="margin:0;">Ширина (px):</label>
+                <input type="number" id="mat-custom-w" value="1920" style="width:100px;" oninput="changeMaterialDimensions()">
+                <label style="margin:0;">Высота:</label>
+                <input type="number" id="mat-custom-h" value="1080" style="width:100px;" oninput="changeMaterialDimensions()">
+            </div>
+
+            <div class="section-title">Управление Заглушкой</div>
+            <div class="form-group">
+                <input type="text" id="master-stub-url" placeholder="URL заглушки (картинка/заставка)" style="margin-bottom:8px;">
+                <div class="btn-group">
+                    <button onclick="toggleStub(true)" style="background:#dc3545;" class="btn-sm">Вкл. заглушку</button>
+                    <button onclick="toggleStub(false)" style="background:#28a745;" class="btn-sm">Выкл. (Контент)</button>
+                </div>
+            </div>
+
+            <div class="section-title">Инструменты тестирования</div>
+            <button onclick="triggerIdentify()" style="background:#6c757d; margin-bottom:15px;" class="btn-sm">Определить номера (Экранные плашки)</button>
+
+            <div class="section-title">Режим "Расширение" (Стена)</div>
+            <button onclick="activateWallMode()" style="background:#ffcc00; color:#000; font-weight:bold; margin-bottom:10px;">🔥 ЗАПУСТИТЬ СИНХРОНИЗАЦИЮ СТЕНЫ</button>
+            
+            <div id="master-screens-list"></div>
+        </div>
+    </div>
+    <script>
+        const channel = new BroadcastChannel('local_sync_screens');
+        
+        let myIdx = 1;
+        let mySubIdx = 1;
+        let isMaster = false;
+        
+        const getDisplayWidth = () => window.innerWidth;
+        const getDisplayHeight = () => window.innerHeight;
+        const getResolutionStr = () => `${getDisplayWidth()}x${getDisplayHeight()}`;
+
+        function saveScreenConfig() {
+            myIdx = parseInt(document.getElementById('screen-idx').value) || 1;
+            document.getElementById('setup-overlay').style.display = 'none';
+            announceScreen();
+        }
+
+        function announceScreen() {
+            channel.postMessage({
+                type: 'REGISTER_SCREEN',
+                idx: myIdx,
+                w: getDisplayWidth(),
+                h: getDisplayHeight(),
+                resStr: getResolutionStr()
+            });
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'e' || e.key.toLowerCase() === 'у') {
+                if (document.activeElement.tagName === 'INPUT') return;
+                
+                isMaster = true;
+                document.getElementById('setup-overlay').style.display = 'none';
+                document.getElementById('master-panel').style.display = 'flex';
+                document.getElementById('wall-canvas-container').style.display = 'block';
+                
+                requestReindex();
+            }
+        });
+
+        function requestReindex() {
+            if (!isMaster) return;
+            window.discoveredScreens = [];
+            channel.postMessage({ type: 'REQUEST_ANNOUNCE' });
+            setTimeout(renderMasterControls, 300);
+        }
+
+        let materialWidth = 1920;
+        let materialHeight = 1080;
+        let canvasScale = 0.15;
+
+        function updateMaterialSize() {
+            materialWidth = 1920;
+            materialHeight = 1080;
+            document.getElementById('mat-custom-w').value = materialWidth;
+            document.getElementById('mat-custom-h').value = materialHeight;
+            recalcCanvasScale();
+        }
+
+        function changeMaterialDimensions() {
+            materialWidth = parseInt(document.getElementById('mat-custom-w').value) || 1920;
+            materialHeight = parseInt(document.getElementById('mat-custom-h').value) || 1080;
+            recalcCanvasScale();
+        }
+
+        function recalcCanvasScale() {
+            const container = document.getElementById('wall-canvas-container');
+            const availW = container.clientWidth - 100;
+            const availH = container.clientHeight - 100;
+            
+            const scaleX = availW / (materialWidth * 1.5);
+            const scaleY = availH / (materialHeight * 1.5);
+            canvasScale = Math.min(scaleX, scaleY, 0.4);
+            
+            const view = document.getElementById('canvas-viewport');
+            view.style.transform = `scale(${canvasScale})`;
+            view.style.left = '50px';
+            view.style.top = '50px';
+
+            const boundary = document.getElementById('material-boundary');
+            boundary.style.width = materialWidth + 'px';
+            boundary.style.height = materialHeight + 'px';
+            
+            window.discoveredScreens.forEach(scr => {
+                const el = document.getElementById(`canvas-scr-${scr.idKey}`);
+                if(el) updateScreenVisualState(el, scr);
+            });
+        }
+
+        window.discoveredScreens = [];
+
+        function renderMasterControls() {
+            const listDiv = document.getElementById('master-screens-list');
+            listDiv.innerHTML = '<div class="section-title">Активные экраны:</div>';
+            
+            document.querySelectorAll('.canvas-screen').forEach(e => e.remove());
+            window.discoveredScreens.sort((a,b) => a.idx - b.idx || a.subIdx - b.subIdx);
+
+            window.discoveredScreens.forEach((scr, i) => {
+                const labelText = `Экран ${scr.idx}${scr.isDuplicate ? ',' + scr.subIdx : ''}`;
+                const colorIdx = (scr.idx % 4) + 1;
+                
+                const html = `
+                    <div style="background:#2d2d35; padding:8px; border-radius:4px; margin-bottom:5px; font-size:13px; display:flex; justify-content:between; align-items:center;">
+                        <span>🟢 <b>${labelText}</b> (${scr.resStr})</span>
+                        <label style="margin:0; font-size:11px;"><input type="checkbox" id="except-${scr.idKey}"> Исключить</label>
+                    </div>
+                `;
+                listDiv.insertAdjacentHTML('beforeend', html);
+
+                const cScr = document.createElement('div');
+                cScr.className = 'canvas-screen';
+                cScr.id = `canvas-scr-${scr.idKey}`;
+                cScr.setAttribute('data-color', colorIdx);
+                cScr.style.width = scr.w + 'px';
+                cScr.style.height = scr.h + 'px';
+                cScr.innerHTML = `<div>экран ${scr.idx}</div><div class="scr-res">${scr.resStr}</div>`;
+                
+                const overflowContainer = document.createElement('div');
+                overflowContainer.className = 'overflow-line-container';
+                cScr.appendChild(overflowContainer);
+
+                document.getElementById('canvas-viewport').appendChild(cScr);
+                
+                if (!scr.posX) scr.posX = i * 200;
+                if (!scr.posY) scr.posY = 0;
+                
+                updateScreenVisualState(cScr, scr);
+                makeElementDraggable(cScr, scr);
+            });
+            recalcCanvasScale();
+        }
+        function updateScreenVisualState(el, scr) {
+            el.style.left = scr.posX + 'px';
+            el.style.top = scr.posY + 'px';
+
+            const overflowContainer = el.querySelector('.overflow-line-container');
+            overflowContainer.innerHTML = '';
+
+            if (scr.posX < materialWidth && (scr.posX + scr.w) > materialWidth) {
+                const localX = materialWidth - scr.posX;
+                overflowContainer.insertAdjacentHTML('beforeend', `<div style="position:absolute; left:${localX}px; top:0; bottom:0; border-left:3px dashed red; z-index:10;"></div>`);
+            }
+            if (scr.posY < materialHeight && (scr.posY + scr.h) > materialHeight) {
+                const localY = materialHeight - scr.posY;
+                overflowContainer.insertAdjacentHTML('beforeend', `<div style="position:absolute; top:${localY}px; left:0; right:0; border-top:3px dashed red; z-index:10;"></div>`);
+            }
+            if (scr.posX < 0 && (scr.posX + scr.w) > 0) {
+                const localX = -scr.posX;
+                overflowContainer.insertAdjacentHTML('beforeend', `<div style="position:absolute; left:${localX}px; top:0; bottom:0; border-left:3px dashed red; z-index:10;"></div>`);
+            }
+            if (scr.posY < 0 && (scr.posY + scr.h) > 0) {
+                const localY = -scr.posY;
+                overflowContainer.insertAdjacentHTML('beforeend', `<div style="position:absolute; top:${localY}px; left:0; right:0; border-top:3px dashed red; z-index:10;"></div>`);
+            }
+        }
+
+        function makeElementDraggable(el, scr) {
+            let startX = 0, startY = 0;
+            el.addEventListener('mousedown', dragStart);
+
+            function dragStart(e) {
+                if (e.target.tagName === 'INPUT') return;
+                e.preventDefault();
+                startX = e.clientX;
+                startY = e.clientY;
+                document.addEventListener('mousemove', dragMove);
+                document.addEventListener('mouseup', dragEnd);
+            }
+
+            function dragMove(e) {
+                const dx = (e.clientX - startX) / canvasScale;
+                const dy = (e.clientY - startY) / canvasScale;
+                startX = e.clientX;
+                startY = e.clientY;
+
+                scr.posX = Math.round(scr.posX + dx);
+                scr.posY = Math.round(scr.posY + dy);
+                updateScreenVisualState(el, scr);
+            }
+
+            function dragEnd() {
+                document.removeEventListener('mousemove', dragMove);
+                document.removeEventListener('mouseup', dragEnd);
+            }
+        }
+
+        function activateWallMode() {
+            const mediaUrl = document.getElementById('wall-media-url').value || 'about:blank';
+            window.discoveredScreens.forEach(scr => {
+                channel.postMessage({
+                    type: 'SET_WALL_CONFIG',
+                    idx: scr.idx,
+                    subIdx: scr.subIdx,
+                    url: mediaUrl,
+                    totalW: materialWidth,
+                    totalH: materialHeight,
+                    cropX: scr.posX,
+                    cropY: scr.posY,
+                    screenW: scr.w,
+                    screenH: scr.h
+                });
+            });
+        }
+
+        function toggleStub(enable) {
+            const stubUrl = document.getElementById('master-stub-url').value || 'about:blank';
+            window.discoveredScreens.forEach(scr => {
+                const isException = document.getElementById(`except-${scr.idKey}`)?.checked || false;
+                channel.postMessage({
+                    type: 'SET_STUB_MODE',
+                    idx: scr.idx,
+                    subIdx: scr.subIdx,
+                    enable: enable,
+                    stubUrl: stubUrl,
+                    isException: isException
+                });
+            });
+        }
+
+        function triggerIdentify() {
+            channel.postMessage({ type: 'SHOW_NUMBERS' });
+        }
+
+        let savedWallConfig = null;
+        let isStubActive = false;
+        let stubUrlGlobal = '';
+        let stubException = false;
+
+        channel.onmessage = (event) => {
+            const msg = event.data;
+
+            if (msg.type === 'REQUEST_ANNOUNCE') {
+                announceScreen();
+            }
+
+            if (msg.type === 'REGISTER_SCREEN' && isMaster) {
+                const duplicates = window.discoveredScreens.filter(s => s.idx === msg.idx && s.resStr === msg.resStr);
+                const nextSubIdx = duplicates.length + 1;
+                
+                if (nextSubIdx > 1) duplicates.forEach(d => d.isDuplicate = true);
+                const idKey = `${msg.idx}_${nextSubIdx}_${msg.resStr.replace('x','_')}`;
+
+                window.discoveredScreens.push({
+                    idKey: idKey, idx: msg.idx, subIdx: nextSubIdx,
+                    w: msg.w, h: msg.h, resStr: msg.resStr,
+                    isDuplicate: nextSubIdx > 1, posX: null, posY: null
+                });
+
+                channel.postMessage({
+                    type: 'ASSIGN_SUBID', idx: msg.idx, resStr: msg.resStr, subIdx: nextSubIdx, hasDuplicates: nextSubIdx > 1
+                });
+            }
+
+            if (msg.type === 'ASSIGN_SUBID' && msg.idx === myIdx && msg.resStr === getResolutionStr()) {
+                mySubIdx = msg.subIdx;
+                document.getElementById('screen-number-display').innerText = msg.hasDuplicates ? `${myIdx},${mySubIdx}` : `${myIdx}`;
+            }
+
+            if (msg.type === 'SET_WALL_CONFIG' && msg.idx === myIdx && msg.subIdx === mySubIdx) {
+                savedWallConfig = msg;
+                renderClientFrame();
+            }
+
+            if (msg.type === 'SET_STUB_MODE' && msg.idx === myIdx && msg.subIdx === mySubIdx) {
+                isStubActive = msg.enable;
+                stubUrlGlobal = msg.stubUrl;
+                stubException = msg.isException;
+                renderClientFrame();
+            }
+
+            if (msg.type === 'SHOW_NUMBERS') {
+                const display = document.getElementById('screen-number-display');
+                display.style.display = 'block';
+                setTimeout(() => { display.style.display = 'none'; }, 3000);
+            }
+        };
+
+        function renderClientFrame() {
+            const frame = document.getElementById('content-frame');
+            
+            if (isStubActive && !stubException) {
+                frame.src = stubUrlGlobal;
+                frame.style.width = '100%'; frame.style.height = '100%';
+                frame.style.left = '0px'; frame.style.top = '0px';
+                frame.style.transform = 'none';
+                return;
+            }
+
+            if (!savedWallConfig) return;
+
+            if (frame.src !== savedWallConfig.url) {
+                frame.src = savedWallConfig.url;
+            }
+
+            frame.style.width = savedWallConfig.totalW + 'px';
+            frame.style.height = savedWallConfig.totalH + 'px';
+            frame.style.left = (-savedWallConfig.cropX) + 'px';
+            frame.style.top = (-savedWallConfig.cropY) + 'px';
+            frame.style.transform = 'none'; 
+        }
+
+        window.addEventListener('resize', () => {
+            if (!isMaster) announceScreen();
+            else recalcCanvasScale();
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (!isMaster) channel.postMessage({ type: 'REQUEST_ANNOUNCE' });
+        });
+    </script>
+</body>
+</html>
