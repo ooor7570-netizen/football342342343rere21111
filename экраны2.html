@@ -3,21 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Автоматическая Синхронизация Экранов</title>
+    <title>Централизованная Видеосистема Экранов</title>
     <style>
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
             font-family: 'Segoe UI', Arial, sans-serif; overflow: hidden; background: #000;
         }
-        /* Обёртка контента */
+        /* Финальное решение авто-увеличения во весь экран без CORS ошибок */
         #content-wrapper {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            display: flex; align-items: center; justify-content: center; overflow: hidden;
         }
         iframe {
-            width: 100%; height: 100vh; border: none; display: block; transform-origin: top left;
+            width: 100vw !important;
+            height: 100vh !important;
+            min-width: 100% !important;
+            min-height: 100% !important;
+            border: none; 
+            display: block;
+            object-fit: cover; /* Принудительное заполнение пространства */
+            transform-origin: center center;
         }
         
-        /* Кнопки */
+        /* Кнопки управления */
         button { 
             background: #007bff; color: white; border: none; padding: 10px 15px; 
             border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;
@@ -79,8 +87,16 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: border-color 0.2s;
         }
         .screen-card:hover { border-color: #555; }
-        .screen-card h4 { margin: 0 0 12px 0; color: #ffcc00; font-size: 16px; display: flex; justify-content: space-between; }
-        .screen-card .res-tag { font-size: 12px; color: #aaa; font-weight: normal; background: #2a2a32; padding: 2px 6px; border-radius: 4px; }
+        .screen-card h4 { margin: 0 0 12px 0; color: #ffcc00; font-size: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .screen-card .res-tag { font-size: 11px; color: #aaa; font-weight: normal; background: #2a2a32; padding: 2px 6px; border-radius: 4px; }
+        
+        /* Смена номера инпут */
+        .change-id-zone {
+            display: flex; gap: 6px; margin-bottom: 12px; background: #141418; padding: 8px; border-radius: 4px; border: 1px dashed #444;
+        }
+        .change-id-zone input { width: 70px !important; padding: 4px !important; text-align: center; }
+        .change-id-zone button { padding: 4px 10px; font-size: 12px; }
+
         .control-row { display: flex; align-items: center; justify-content: space-between; margin-top: 15px; font-size: 13px; gap: 10px; }
         .control-row button { padding: 6px 12px; font-size: 12px; }
     </style>
@@ -96,15 +112,15 @@
     <!-- ПОЛНОЭКРАННЫЙ МАСТЕР -->
     <div id="master-panel">
         <div class="panel-header">
-            <h3>Панель Управления Мастера 👑</h3>
-            <span id="master-status-tag" style="color:#28a745; font-size:14px;">Сеть активна</span>
+            <h3>Панель Управления Мастера (Центральный Сервер) 👑</h3>
+            <span style="color:#28a745; font-size:14px; font-weight:bold;">Реестр ID активен</span>
         </div>
         
         <div class="panel-content">
             <div class="sidebar-left">
-                <div class="section-title" style="margin-top:0;">Сеть и Инструменты</div>
-                <!-- Кнопка обновления сети -->
-                <button onclick="requestReindex()" class="btn-warning" style="width:100%; margin-bottom:10px;">🔄 ОБНОВИТЬ СЕТЬ ЭКРАНОВ</button>
+                <div class="section-title" style="margin-top:0;">Сеть и Синхронизация</div>
+                <!-- Переиндексация сети -->
+                <button onclick="requestReindex()" class="btn-warning" style="width:100%; margin-bottom:10px;">🔄 ПЕРЕЗАПУСТИТЬ И ОБНОВИТЬ СЕТЬ</button>
                 <button id="btn-toggle-numbers" onclick="toggleNumbersDisplay()" class="btn-secondary" style="width:100%; margin-bottom:15px;">Показать номера экранов</button>
 
                 <div class="section-title">Глобальная заглушка</div>
@@ -118,13 +134,13 @@
                 </div>
                 
                 <div class="section-title">Масштаб</div>
-                <div style="background:#25252b; padding:10px; border-radius:4px; font-size:13px; color:#aaa; line-height:1.4;">
-                    📐 <strong>Авто-высота (CSS):</strong> Настройка высоты материала автоматически подстраивается под пропорции экрана.
+                <div style="background:#25252b; padding:10px; border-radius:4px; font-size:13px; color:#fff; line-height:1.4; border-left: 4px solid #28a745;">
+                    🔥 <strong>Объектное заполнение (Cover):</strong> Изображение и сайты принудительно разворачиваются во весь физический экран без деформаций и пустых полей.
                 </div>
             </div>
             
             <div class="main-zone">
-                <div class="section-title" style="margin-top:0; margin-bottom:15px;">Список подключенных мониторов в реальном времени</div>
+                <div class="section-title" style="margin-top:0; margin-bottom:15px;">Управление подключенными вкладками</div>
                 <div id="master-screens-list" class="screens-grid"></div>
             </div>
         </div>
@@ -132,7 +148,10 @@
     <script>
         const channel = new BroadcastChannel('local_sync_screens');
         
-        let myIdx = null; // Присваивается автоматически
+        // Генерация случайного токена вкладки, чтобы отличать их друг от друга внутри системы
+        const myToken = Math.random().toString(36).substring(2, 15);
+        
+        let myIdx = null; 
         let mySubIdx = 1;
         let isMaster = false;
         let numbersVisibleGlobal = false;
@@ -141,32 +160,23 @@
         const getDisplayHeight = () => window.innerHeight;
         const getResolutionStr = () => `${getDisplayWidth()}x${getDisplayHeight()}`;
 
-        // При запуске сайта сразу запрашиваем свободный ID
+        // При открытии страницы отправляем запрос Мастеру на выдачу ID
         window.addEventListener('DOMContentLoaded', () => {
-            // Запрашиваем распределение номеров от мастера или других участников
             channel.postMessage({
-                type: 'REQUEST_AUTO_ID',
+                type: 'CLIENT_HELLO',
+                token: myToken,
                 resStr: getResolutionStr()
             });
             
-            // Если в течение 400мс никто не ответил (мы первые в сети), ставим себе ID 1
+            // Если через 500мс мастер не ответил (его еще нет), значит мы потенциально первые в сети.
+            // Номер присвоится окончательно, когда кто-то нажмет "E" и станет Мастером.
             setTimeout(() => {
                 if (myIdx === null) {
                     myIdx = 1;
                     applyLocalNumberText(false);
-                    announceScreen();
                 }
-            }, 400);
+            }, 500);
         });
-
-        function announceScreen() {
-            if (myIdx === null) return;
-            channel.postMessage({
-                type: 'REGISTER_SCREEN',
-                idx: myIdx,
-                resStr: getResolutionStr()
-            });
-        }
 
         function applyLocalNumberText(hasDuplicates) {
             document.getElementById('screen-number-display').innerText = hasDuplicates ? `${myIdx},${mySubIdx}` : `${myIdx}`;
@@ -178,61 +188,70 @@
                 if (document.activeElement.tagName === 'INPUT') return;
                 
                 isMaster = true;
+                // Инициализируем серверную базу данных номеров внутри этой вкладки
+                window.masterRegistry = [];
                 document.getElementById('master-panel').style.display = 'flex';
                 requestReindex();
             }
         });
 
-        // Кнопка обновления сети полностью сбрасывает массив и запрашивает перекличку
+        // Кнопка обновления сети (Перезапуск сбора)
         function requestReindex() {
             if (!isMaster) return;
-            window.discoveredScreens = [];
-            document.getElementById('master-screens-list').innerHTML = '<p class="hint">Переиндексация сети устройств...</p>';
-            channel.postMessage({ type: 'REQUEST_ANNOUNCE' });
+            window.masterRegistry = [];
+            document.getElementById('master-screens-list').innerHTML = '<p class="hint">Опрос и пересчет структуры сети...</p>';
+            channel.postMessage({ type: 'MASTER_PING_ALL' });
             
             setTimeout(renderMasterControls, 400);
         }
 
-        window.discoveredScreens = [];
-
+        // Отрисовка карточек на полноэкранном Мастере
         function renderMasterControls() {
             const listDiv = document.getElementById('master-screens-list');
             listDiv.innerHTML = '';
             
-            if (window.discoveredScreens.length === 0) {
-                listDiv.innerHTML = '<p class="hint" style="grid-column: 1/-1; font-size:14px;">Мониторы не обнаружены. Проверьте, открыты ли другие вкладки.</p>';
+            if (window.masterRegistry.length === 0) {
+                listDiv.innerHTML = '<p class="hint" style="grid-column: 1/-1; font-size:14px;">Экраны не обнаружены. Откройте index.html в дополнительных окнах.</p>';
                 return;
             }
 
-            window.discoveredScreens.sort((a,b) => a.idx - b.idx || a.subIdx - b.subIdx);
+            // Сортировка по логическому ID и подномеру дубликатов
+            window.masterRegistry.sort((a,b) => a.idx - b.idx || a.subIdx - b.subIdx);
 
-            window.discoveredScreens.forEach((scr) => {
+            window.masterRegistry.forEach((scr) => {
                 const labelText = `Экран ${scr.idx}${scr.isDuplicate ? ',' + scr.subIdx : ''}`;
                 
                 const html = `
-                    <div class="screen-card" id="card-${scr.idKey}">
+                    <div class="screen-card" id="card-${scr.token}">
                         <h4>
                             <span>🖥️ ${labelText}</span>
                             <span class="res-tag">${scr.resStr}</span>
                         </h4>
                         
+                        <!-- Блок РУЧНОЙ СМЕНЫ НОМЕРА если автовыдача не подошла -->
+                        <div class="change-id-zone">
+                            <label style="margin:0; font-size:12px; display:flex; align-items:center;">Индекс:</label>
+                            <input type="number" id="new-id-${scr.token}" value="${scr.idx}" min="1">
+                            <button onclick="manualChangeId('${scr.token}')" class="btn-warning">Применить №</button>
+                        </div>
+
                         <div class="form-group">
                             <label>Основной URL (Поток 1):</label>
-                            <input type="text" id="url1-${scr.idKey}" placeholder="https://..." onchange="sendConfigToScreen('${scr.idKey}')">
+                            <input type="text" id="url1-${scr.token}" placeholder="https://..." onchange="sendConfigToScreen('${scr.token}')">
                         </div>
                         
                         <div class="form-group">
                             <label>Резервный URL (Поток 2):</label>
-                            <input type="text" id="url2-${scr.idKey}" placeholder="https://..." onchange="sendConfigToScreen('${scr.idKey}')">
+                            <input type="text" id="url2-${scr.token}" placeholder="https://..." onchange="sendConfigToScreen('${scr.token}')">
                         </div>
 
                         <div class="control-row">
                             <label style="font-weight:normal; display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
-                                <input type="checkbox" id="except-${scr.idKey}" onchange="sendConfigToScreen('${scr.idKey}')"> Исключить из общ. заглушки
+                                <input type="checkbox" id="except-${scr.token}" onchange="sendConfigToScreen('${scr.token}')"> Исключить из общей заглушки
                             </label>
                             <div style="display:flex; gap:6px;">
-                                <button onclick="setIndividualStub('${scr.idKey}', true)" class="btn-danger">Вкл</button>
-                                <button onclick="setIndividualStub('${scr.idKey}', false)" class="btn-success">Выкл</button>
+                                <button onclick="setIndividualStub('${scr.token}', true)" class="btn-danger">Вкл</button>
+                                <button onclick="setIndividualStub('${scr.token}', false)" class="btn-success">Выкл</button>
                             </div>
                         </div>
                     </div>
@@ -240,24 +259,62 @@
                 listDiv.insertAdjacentHTML('beforeend', html);
             });
         }
+        // Логика ручной смены номера экрана на Мастере
+        function manualChangeId(token) {
+            const newId = parseInt(document.getElementById(`new-id-${token}`).value) || 1;
+            
+            // Находим устройство в реестре мастера и обновляем его ID
+            const scr = window.masterRegistry.find(s => s.token === token);
+            if (!scr) return;
+            
+            scr.idx = newId;
 
-        function sendConfigToScreen(idKey) {
-            const scr = window.discoveredScreens.find(s => s.idKey === idKey);
+            // Пересчитываем дубликаты разрешений для измененного ID
+            const duplicates = window.masterRegistry.filter(s => s.idx === newId && s.resStr === scr.resStr);
+            if (duplicates.length > 1) {
+                duplicates.forEach((d, index) => {
+                    d.subIdx = index + 1;
+                    d.isDuplicate = true;
+                    // Оповещаем измененные экраны об их новых подномерах
+                    sendUpdatedIdToClient(d);
+                });
+            } else {
+                scr.subIdx = 1;
+                scr.isDuplicate = false;
+                sendUpdatedIdToClient(scr);
+            }
+
+            // Перестраиваем интерфейс управления
+            renderMasterControls();
+        }
+
+        function sendUpdatedIdToClient(scr) {
+            channel.postMessage({
+                type: 'FORCE_NEW_ID',
+                token: scr.token,
+                newIdx: scr.idx,
+                newSubIdx: scr.subIdx,
+                hasDuplicates: scr.isDuplicate
+            });
+        }
+
+        function sendConfigToScreen(token) {
+            const scr = window.masterRegistry.find(s => s.token === token);
             if (!scr) return;
 
-            const url1 = document.getElementById(`url1-${idKey}`).value;
-            const url2 = document.getElementById(`url2-${idKey}`).value;
-            const isException = document.getElementById(`except-${idKey}`).checked;
+            const url1 = document.getElementById(`url1-${token}`).value;
+            const url2 = document.getElementById(`url2-${token}`).value;
+            const isException = document.getElementById(`except-${token}`).checked;
 
             channel.postMessage({
                 type: 'SET_SCREEN_URLS',
-                idx: scr.idx,
-                subIdx: scr.subIdx,
+                token: scr.token,
                 url1: url1,
                 url2: url2,
                 isException: isException
             });
         }
+
         function toggleNumbersDisplay() {
             numbersVisibleGlobal = !numbersVisibleGlobal;
             const btn = document.getElementById('btn-toggle-numbers');
@@ -278,12 +335,11 @@
 
         function globalStubToggle(enable) {
             const stubUrl = document.getElementById('master-stub-url').value || 'about:blank';
-            window.discoveredScreens.forEach(scr => {
-                const isException = document.getElementById(`except-${scr.idKey}`).checked;
+            window.masterRegistry.forEach(scr => {
+                const isException = document.getElementById(`except-${scr.token}`).checked;
                 channel.postMessage({
                     type: 'SET_STUB_MODE',
-                    idx: scr.idx,
-                    subIdx: scr.subIdx,
+                    token: scr.token,
                     enable: enable,
                     stubUrl: stubUrl,
                     isGlobal: true,
@@ -292,15 +348,11 @@
             });
         }
 
-        function setIndividualStub(idKey, enable) {
-            const scr = window.discoveredScreens.find(s => s.idKey === idKey);
-            if (!scr) return;
+        function setIndividualStub(token, enable) {
             const stubUrl = document.getElementById('master-stub-url').value || 'about:blank';
-
             channel.postMessage({
                 type: 'SET_STUB_MODE',
-                idx: scr.idx,
-                subIdx: scr.subIdx,
+                token: token,
                 enable: enable,
                 stubUrl: stubUrl,
                 isGlobal: false,
@@ -321,65 +373,95 @@
         channel.onmessage = (event) => {
             const msg = event.data;
 
-            // Расчёт и выдача свободного порядкового ID
-            if (msg.type === 'REQUEST_AUTO_ID') {
-                if (myIdx !== null) {
-                    // Отправляем новому участнику информацию о том, какие ID заняты
+            // А) Ответ на запрос подключения от новой вкладки
+            if (msg.type === 'CLIENT_HELLO' && isMaster) {
+                // Сервер вычисляет следующий свободный ID
+                let nextFreeIdx = 1;
+                while (window.masterRegistry.some(s => s.idx === nextFreeIdx)) {
+                    nextFreeIdx++;
+                }
+
+                const duplicates = window.masterRegistry.filter(s => s.idx === nextFreeIdx && s.resStr === msg.resStr);
+                const subIdx = duplicates.length + 1;
+
+                window.masterRegistry.push({
+                    token: msg.token,
+                    idx: nextFreeIdx,
+                    subIdx: subIdx,
+                    resStr: msg.resStr,
+                    isDuplicate: subIdx > 1
+                });
+
+                // Персонально отправляем клиенту его выверенный ID
+                channel.postMessage({
+                    type: 'SERVER_ASSIGN_ID',
+                    token: msg.token,
+                    assignedIdx: nextFreeIdx,
+                    assignedSubIdx: subIdx,
+                    hasDuplicates: subIdx > 1
+                });
+                renderMasterControls();
+            }
+
+            // Б) Ответ на пинг перекличку от Мастера
+            if (msg.type === 'MASTER_PING_ALL') {
+                channel.postMessage({
+                    type: 'CLIENT_PONG',
+                    token: myToken,
+                    idx: myIdx || 1,
+                    resStr: getResolutionStr()
+                });
+            }
+
+            // В) Мастер собирает ответы переклички
+            if (msg.type === 'CLIENT_PONG' && isMaster) {
+                if (!window.masterRegistry.some(s => s.token === msg.token)) {
+                    const duplicates = window.masterRegistry.filter(s => s.idx === msg.idx && s.resStr === msg.resStr);
+                    const subIdx = duplicates.length + 1;
+                    if (subIdx > 1) duplicates.forEach(d => d.isDuplicate = true);
+
+                    window.masterRegistry.push({
+                        token: msg.token,
+                        idx: msg.idx,
+                        subIdx: subIdx,
+                        resStr: msg.resStr,
+                        isDuplicate: subIdx > 1
+                    });
+
                     channel.postMessage({
-                        type: 'REPORT_USED_ID',
-                        usedIdx: myIdx
+                        type: 'SERVER_ASSIGN_ID',
+                        token: msg.token,
+                        assignedIdx: msg.idx,
+                        assignedSubIdx: subIdx,
+                        hasDuplicates: subIdx > 1
                     });
                 }
             }
 
-            // Накапливаем список занятых ID у нового клиента, чтобы выбрать первый свободный
-            if (msg.type === 'REPORT_USED_ID' && myIdx === null) {
-                if (!window.busyIds) window.busyIds = [];
-                window.busyIds.push(msg.usedIdx);
-                
-                // Ищем минимальное свободное число от 1 до бесконечности
-                let candidate = 1;
-                while (window.busyIds.includes(candidate)) {
-                    candidate++;
-                }
-                myIdx = candidate;
-                applyLocalNumberText(false);
-                announceScreen();
-            }
-
-            if (msg.type === 'REQUEST_ANNOUNCE') {
-                announceScreen();
-            }
-
-            if (msg.type === 'REGISTER_SCREEN' && isMaster) {
-                const duplicates = window.discoveredScreens.filter(s => s.idx === msg.idx && s.resStr === msg.resStr);
-                const nextSubIdx = duplicates.length + 1;
-                
-                if (nextSubIdx > 1) duplicates.forEach(d => d.isDuplicate = true);
-                const idKey = `${msg.idx}_${nextSubIdx}_${msg.resStr.replace('x','_')}`;
-
-                window.discoveredScreens.push({
-                    idKey: idKey, idx: msg.idx, subIdx: nextSubIdx, resStr: msg.resStr, isDuplicate: nextSubIdx > 1
-                });
-
-                channel.postMessage({
-                    type: 'ASSIGN_SUBID', idx: msg.idx, resStr: msg.resStr, subIdx: nextSubIdx, hasDuplicates: nextSubIdx > 1
-                });
-            }
-
-            if (msg.type === 'ASSIGN_SUBID' && msg.idx === myIdx && msg.resStr === getResolutionStr()) {
-                mySubIdx = msg.subIdx;
+            // Г) Присвоение ID от сервера авторизации
+            if (msg.type === 'SERVER_ASSIGN_ID' && msg.token === myToken) {
+                myIdx = msg.assignedIdx;
+                mySubIdx = msg.assignedSubIdx;
                 applyLocalNumberText(msg.hasDuplicates);
             }
 
-            if (msg.type === 'SET_SCREEN_URLS' && msg.idx === myIdx && msg.subIdx === mySubIdx) {
+            // Д) Экстренное принудительное изменение номера с мастера
+            if (msg.type === 'FORCE_NEW_ID' && msg.token === myToken) {
+                myIdx = msg.newIdx;
+                mySubIdx = msg.newSubIdx;
+                applyLocalNumberText(msg.hasDuplicates);
+            }
+
+            // Е) Получение рабочих ссылок
+            if (msg.type === 'SET_SCREEN_URLS' && msg.token === myToken) {
                 clientUrl1 = msg.url1 || 'about:blank';
                 clientUrl2 = msg.url2 || 'about:blank';
                 clientIsException = msg.isException;
                 renderFrameContent();
             }
 
-            if (msg.type === 'SET_STUB_MODE' && msg.idx === myIdx && msg.subIdx === mySubIdx) {
+            // Ж) Управление заглушками
+            if (msg.type === 'SET_STUB_MODE' && msg.token === myToken) {
                 if (msg.isGlobal && msg.isException && msg.enable) {
                     stubActive = false;
                 } else {
@@ -389,6 +471,7 @@
                 renderFrameContent();
             }
 
+            // З) Управление тумблером номеров
             if (msg.type === 'TOGGLE_NUMBERS_VIEW') {
                 const display = document.getElementById('screen-number-display');
                 display.style.display = msg.visible ? 'block' : 'none';
@@ -400,25 +483,20 @@
             
             if (stubActive) {
                 if (frame.src !== activeStubUrl) frame.src = activeStubUrl;
-                frame.style.transform = 'none';
-                frame.style.height = '100vh';
             } else {
                 const targetUrl = clientUrl1 !== "about:blank" && clientUrl1 !== "" ? clientUrl1 : clientUrl2;
                 if (frame.src !== targetUrl) frame.src = targetUrl;
-                
-                // РАБОЧИЙ МЕТОД АВТОУВЕЛИЧЕНИЯ ПО ВЫСОТЕ НА CSS БЕЗ CORS НАРУШЕНИЙ
-                // Iframe жестко занимает 100vh, а контент внутри подстраивается браузером автоматически.
-                frame.style.height = '100vh';
-                frame.style.transform = 'none';
             }
         }
 
         window.addEventListener('resize', () => {
-            if (!isMaster) announceScreen();
-        });
-
-        window.addEventListener('beforeunload', () => {
-            if (!isMaster) channel.postMessage({ type: 'REQUEST_ANNOUNCE' });
+            if (!isMaster) {
+                channel.postMessage({
+                    type: 'CLIENT_HELLO',
+                    token: myToken,
+                    resStr: getResolutionStr()
+                });
+            }
         });
     </script>
 </body>
