@@ -361,7 +361,6 @@
             const msg = event.data;
 
             if (msg.type === 'CLIENT_HELLO' && isMaster) {
-                // Сервер находит следующий уникальный свободный ID в реестре
                 let nextFreeIdx = 1;
                 while (window.masterRegistry.some(s => s.idx === nextFreeIdx)) {
                     nextFreeIdx++;
@@ -371,29 +370,18 @@
                 const subIdx = duplicates.length + 1;
 
                 window.masterRegistry.push({
-                    token: msg.token,
-                    idx: nextFreeIdx,
-                    subIdx: subIdx,
-                    resStr: msg.resStr,
-                    isDuplicate: subIdx > 1
+                    token: msg.token, idx: nextFreeIdx, subIdx: subIdx, resStr: msg.resStr, isDuplicate: subIdx > 1
                 });
 
                 channel.postMessage({
-                    type: 'SERVER_ASSIGN_ID',
-                    token: msg.token,
-                    assignedIdx: nextFreeIdx,
-                    assignedSubIdx: subIdx,
-                    hasDuplicates: subIdx > 1
+                    type: 'SERVER_ASSIGN_ID', token: msg.token, assignedIdx: nextFreeIdx, assignedSubIdx: subIdx, hasDuplicates: subIdx > 1
                 });
                 renderMasterControls();
             }
 
             if (msg.type === 'MASTER_PING_ALL') {
                 channel.postMessage({
-                    type: 'CLIENT_PONG',
-                    token: myToken,
-                    idx: myIdx || 1,
-                    resStr: getResolutionStr()
+                    type: 'CLIENT_PONG', token: myToken, idx: myIdx || 1, resStr: getResolutionStr()
                 });
             }
 
@@ -404,19 +392,11 @@
                     if (subIdx > 1) duplicates.forEach(d => d.isDuplicate = true);
 
                     window.masterRegistry.push({
-                        token: msg.token,
-                        idx: msg.idx,
-                        subIdx: subIdx,
-                        resStr: msg.resStr,
-                        isDuplicate: subIdx > 1
+                        token: msg.token, idx: msg.idx, subIdx: subIdx, resStr: msg.resStr, isDuplicate: subIdx > 1
                     });
 
                     channel.postMessage({
-                        type: 'SERVER_ASSIGN_ID',
-                        token: msg.token,
-                        assignedIdx: msg.idx,
-                        assignedSubIdx: subIdx,
-                        hasDuplicates: subIdx > 1
+                        type: 'SERVER_ASSIGN_ID', token: msg.token, assignedIdx: msg.idx, assignedSubIdx: subIdx, hasDuplicates: subIdx > 1
                     });
                 }
             }
@@ -456,23 +436,64 @@
             }
         };
 
+        // НАДЕЖНОЕ РЕШЕНИЕ: Умный рендер контента во фрейме
         function renderFrameContent() {
             const frame = document.getElementById('content-frame');
+            let targetUrl = stubActive ? activeStubUrl : (clientUrl1 !== "about:blank" && clientUrl1 !== "" ? clientUrl1 : clientUrl2);
             
-            if (stubActive) {
-                if (frame.src !== activeStubUrl) frame.src = activeStubUrl;
+            if (!targetUrl || targetUrl === "about:blank" || targetUrl === "") {
+                frame.src = "about:blank";
+                return;
+            }
+
+            // Проверяем, является ли ссылка прямой ссылкой на картинку или гифку
+            const isImage = /\.(jpeg|jpg|gif|png|webp|svg)(\$|\?)/i.test(targetUrl);
+
+            if (isImage) {
+                // Если это изображение, создаем виртуальную страницу с жестким CSS-растяжением
+                const htmlInjection = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <style>
+                            html, body {
+                                margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000;
+                            }
+                            .stretched-bg {
+                                width: 100%; height: 100%;
+                                background-image: url('${targetUrl}');
+                                background-repeat: no-repeat;
+                                background-position: center center;
+                                background-size: 100% 100% !important; /* Насильно растягиваем на весь экран */
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="stretched-bg"></div>
+                    </body>
+                    </html>
+                `;
+                
+                frame.src = "about:blank";
+                // Безопасная запись сгенерированного кода во фрейм
+                setTimeout(() => {
+                    const doc = frame.contentDocument || frame.contentWindow.document;
+                    doc.open();
+                    doc.write(htmlInjection);
+                    doc.close();
+                }, 10);
             } else {
-                const targetUrl = clientUrl1 !== "about:blank" && clientUrl1 !== "" ? clientUrl1 : clientUrl2;
-                if (frame.src !== targetUrl) frame.src = targetUrl;
+                // Если это обычный сайт или видеопоток, загружаем стандартным способом
+                if (frame.src !== targetUrl) {
+                    frame.src = targetUrl;
+                }
             }
         }
 
         window.addEventListener('resize', () => {
             if (!isMaster) {
                 channel.postMessage({
-                    type: 'CLIENT_HELLO',
-                    token: myToken,
-                    resStr: getResolutionStr()
+                    type: 'CLIENT_HELLO', token: myToken, resStr: getResolutionStr()
                 });
             }
         });
